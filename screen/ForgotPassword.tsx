@@ -1,0 +1,127 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { NavigationProp, useNavigation } from '@react-navigation/core';
+import { RootStackParamList } from '../navigation/Navigation';
+
+const ForgetPassword = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // adjust if header exists
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back-ios" size={24} color="#333" />
+          </TouchableOpacity>
+
+          <Text style={styles.title}>Forget Password</Text>
+
+          <TextInput
+            placeholder="Enter Your Email"
+            placeholderTextColor="#b0b0b0"
+            style={styles.input}
+            keyboardType="email-address"
+          />
+
+          <Text style={styles.infoText}>
+            To reset your password, you need your email that can be authenticated
+          </Text>
+
+          <TouchableOpacity style={styles.resetButton}>
+            <Text style={styles.resetButtonText}>Reset password</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backToLoginButton}
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={styles.backButtonText}>Back to login</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  );
+};
+
+export default ForgetPassword;
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e1e5d',
+    marginBottom: 20,
+    paddingHorizontal: 15,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    marginTop: 70,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#8e8e8e',
+    marginBottom: 55,
+    marginTop: 20,
+    paddingHorizontal: 15,
+  },
+  resetButton: {
+    backgroundColor: '#6264A7',
+    paddingVertical: 14,
+    borderRadius: 25,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    marginBottom: 160,
+    marginTop: 20,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backToLoginButton: {
+    backgroundColor: '#9e9e9e',
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+});
