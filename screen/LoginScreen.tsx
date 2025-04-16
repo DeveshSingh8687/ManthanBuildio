@@ -116,8 +116,8 @@ export default function LoginScreen() {
       {/* Sign up */}
       <View style={styles.signUpContainer}>
         <Text style={{ color: '#999' }}>Create New Account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('JobDetailS')}>
-          <Text style={styles.signUpText}>Sign ria</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+          <Text style={styles.signUpText}>Sign up</Text>
         </TouchableOpacity>
       </View>
 
