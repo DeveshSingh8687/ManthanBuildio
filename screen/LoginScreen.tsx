@@ -62,8 +62,8 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >      {/* Back Arrow */}
      <TouchableOpacity style={styles.backButton} onPress={() => {navigation.goBack()}}>
-          <Icon name="arrow-back-ios" size={24} color="#333" />
-        </TouchableOpacity>
+     <Icon name="arrow-back" size={28} color="#333" />
+     </TouchableOpacity>
 
       <Text style={styles.title}>Login Your Account</Text>
 

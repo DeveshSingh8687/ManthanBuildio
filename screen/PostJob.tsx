@@ -1,148 +1,184 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import DropDownPicker from 'react-native-dropdown-picker';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const AddJobScreen = () => {
-  const [formData, setFormData] = useState({
-    description: '',
-    requirements: '',
-    jobLocation: '',
-    jobPosition: '',
-    jobType: '',
-    jobStatus: '',
-    experience: '',
-    deadline: '',
-    budget: '',
-  });
+  const [jobTypeOpen, setJobTypeOpen] = useState(false);
+  const [jobTypeValue, setJobTypeValue] = useState(null);
+  const [jobTypeItems, setJobTypeItems] = useState([
+    { label: 'Full-time', value: 'full_time' },
+    { label: 'Part-time', value: 'part_time' },
+    { label: 'Internship', value: 'internship' },
+    { label: 'Freelance', value: 'freelance' },
+  ]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      [field]: value,
-    }));
-  };
-
-  const handleNext = () => {
-    // Handle form submission or navigation
-    console.log('Form data submitted:', formData);
-  };
+  const fields = [
+    'Description',
+    'Requirements',
+    'Job location',
+    'Job position',
+    'Job Status',
+    'Experience',
+    'Deadline',
+    'Budget',
+  ];
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Add a job</Text>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Description</Text>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type..."
-            value={formData.description}
-            onChangeText={(text) => handleInputChange('description', text)}
-          />
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="pencil" size={20} color="#3f3f3f" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Requirements</Text>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type..."
-            value={formData.requirements}
-            onChangeText={(text) => handleInputChange('requirements', text)}
-          />
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="pencil" size={20} color="#3f3f3f" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Repeat similar blocks for other fields */}
-      {(['jobLocation', 'jobPosition', 'jobType', 'jobStatus', 'experience', 'deadline', 'budget'] as Array<keyof typeof formData>).map((field) => (
-        <View style={styles.inputContainer} key={field}>
-          <Text style={styles.label}>{field.replace(/([A-Z])/g, ' $1').toUpperCase()}</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type..."
-              value={formData[field]}
-              onChangeText={(text) => handleInputChange(field, text)}
-            />
-            <TouchableOpacity style={styles.iconButton}>
-              <Ionicons name="pencil" size={20} color="#3f3f3f" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
-
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Add image</Text>
-        <View style={styles.inputWrapper}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="camera" size={20} color="#3f3f3f" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-        <Text style={styles.nextButtonText}>Next</Text>
+    <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <View style={{ flex: 1 }}>
+  {/* Job Type Dropdown - zIndex must be highest */}
+  <View style={{ zIndex: 1000 }}>
+    <View style={styles.inputCard}>
+      <Text style={styles.label}>Job type</Text>
+      <DropDownPicker
+        open={jobTypeOpen}
+        value={jobTypeValue}
+        items={jobTypeItems}
+        setOpen={setJobTypeOpen}
+        setValue={setJobTypeValue}
+        setItems={setJobTypeItems}
+        searchable
+        placeholder="Select job type"
+        style={styles.dropdown}
+        dropDownContainerStyle={styles.dropdownContainer}
+      />
+    </View>
+  </View>
+  
+        <KeyboardAwareScrollView
+    contentContainerStyle={styles.container}
+    extraScrollHeight={100}
+    enableOnAndroid
+    keyboardShouldPersistTaps="handled"
+  >
+          {/* Header */}
+          <View style={styles.header}>
+      <TouchableOpacity>
+        <Text style={styles.icon}>×</Text>
       </TouchableOpacity>
-    </ScrollView>
+      <Text style={styles.title}>Add a job</Text>
+      <TouchableOpacity>
+        <Text style={styles.nextButton}>Next</Text>
+      </TouchableOpacity>
+    </View>
+  
+          {/* Input Fields */}
+          {fields.map((label, index) => (
+      <View key={index} style={styles.inputCard}>
+        <Text style={styles.label}>{label}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="type..."
+          placeholderTextColor="#888"
+        />
+      </View>
+    ))}
+  
+          {/* Image Upload Section */}
+          <View style={styles.inputCard}>
+      <Text style={styles.label}>Add image</Text>
+      <View style={styles.imageRow}>
+        <TouchableOpacity style={styles.imageButton}>
+          <Icon name="camera-alt" size={22} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.imageButton}>
+          <Icon name="photo-library" size={22} color="white" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  </KeyboardAwareScrollView>
+</View>
+    </TouchableWithoutFeedback>
+  </KeyboardAvoidingView>
+  
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingBottom: 100,
   },
   header: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 20,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  inputWrapper: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    padding: 16,
+    backgroundColor: '#fff',
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#3f3f3f',
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
   },
-  iconButton: {
-    padding: 8,
-  },
+  
   nextButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  nextButtonText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    color: '#7F56D9',
+  },
+ 
+inputCard: {
+  marginHorizontal: 16,
+  marginBottom: 12,
+  padding: 12,
+  backgroundColor: '#fff',
+  borderRadius: 10,
+  shadowColor: '#000',
+  shadowOpacity: 0.05,
+  shadowRadius: 4,
+  elevation: 2,
+},
+  label: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 8,
+    color: '#333',
+  },
+
+  input: {
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    paddingVertical: 6,
+    fontSize: 16,
+  },
+  dropdown: {
+    borderColor: '#ccc',
+    minHeight: 45,
+    zIndex: 1000,
+  },
+  dropdownContainer: {
+    borderColor: '#ccc',
+    zIndex: 1000,
+  },
+
+  imageRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  imageButton: {
+    backgroundColor: '#1A1A1A',
+    padding: 12,
+    borderRadius: 8,
+  },
+  icon: {
+    fontSize: 22,
+    color: '#1A1A1A',
   },
 });
 

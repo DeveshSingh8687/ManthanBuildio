@@ -10,11 +10,16 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+// import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Icon } from 'react-native-elements';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/Navigation'
 
 const { height } = Dimensions.get('window');
 
 const HomeScreen = () => {
+    const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  
   const jobPosts = [
     {
       id: 1,
@@ -41,7 +46,10 @@ const HomeScreen = () => {
       avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
     },
   ];
-
+  const handlePress = () => {
+    // Navigate to PostJob screen
+    navigation.navigate('JobDetailS');
+  };
   const renderPost = ({ item }:any) => (
     <View style={styles.postCard}>
       <Image source={{ uri: item.image }} style={styles.postImage} />
@@ -68,31 +76,39 @@ const HomeScreen = () => {
       <TextInput style={styles.search} placeholder="Search" />
 
       <View style={styles.cardRow}>
-  <TouchableOpacity style={styles.cardBtn}>
-    <View style={styles.cardContent}>
-      <View>
-        <Text style={styles.cardTitle}>Post a task</Text>
-        <Text style={styles.cardSubtitle}>Explore &gt;</Text>
-      </View>
-      <View style={styles.cardIcon}>
-        {/* Mock icon, replace with actual image or icon later */}
-        <Icon name="image" size={50} color="white" />
-      </View>
-    </View>
-  </TouchableOpacity>
+      <TouchableOpacity style={styles.cardBtn}>
+        <View style={styles.cardContent}>
+          <View>
+            <Text style={styles.cardTitle}>Post a task</Text>
+            <Text style={styles.cardSubtitle}>Explore &gt;</Text>
+          </View>
+          <View style={styles.cardIcon}>
+            {/* Image for Post a task */}
+            <Image
+              source={require('../assets/pickTask.png')}  // Replace with your own image for Post
+              style={styles.iconImage}
+            />
+          </View>
+        </View>
+      </TouchableOpacity>
 
-  <TouchableOpacity style={styles.cardBtn}>
-    <View style={styles.cardContent}>
-      <View>
-        <Text style={styles.cardTitle}>Pick a task</Text>
-        <Text style={styles.cardSubtitle}>Explore &gt;</Text>
-      </View>
-      <View style={styles.cardIcon}>
-        {/* Mock icon, replace with actual image or icon later */}
-        <Icon name="image" size={50} color="white" />
-      </View>
-    </View>
-  </TouchableOpacity>
+      {/* Pick a task card */}
+      <TouchableOpacity style={styles.cardBtn} onPress={handlePress}>
+        <View style={styles.cardContent}>
+          <View>
+            <Text style={styles.cardTitle}>Pick a task</Text>
+            <Text style={styles.cardSubtitle}>Explore &gt;</Text>
+          </View>
+          <View style={styles.cardIcon}>
+            {/* Image for Pick a task */}
+            <Image
+              source={require('../assets/postTask.png')}  // Replace with your own image for Pick
+              style={styles.iconImage}
+            />
+          </View>
+        </View>
+      </TouchableOpacity>
+
 </View>
 
       <Text style={styles.sectionTitle}>Recently posted</Text>
@@ -205,6 +221,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'stretch',
+  },
+  iconImage: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain', // Makes sure the image is not stretched
   },
   
   cardBtn: {
