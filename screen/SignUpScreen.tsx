@@ -31,8 +31,8 @@ export default function SignUpScreen() {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back-ios" size={24} color="#333" />
+          <TouchableOpacity style={styles.backButton} onPress={() => {navigation.goBack()}}>
+          <Icon name="arrow-back" size={28} color="#333" />
           </TouchableOpacity>
 
           <Text style={styles.title}>Sign up</Text>

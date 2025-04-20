@@ -37,7 +37,7 @@ export default function LaunchScreen() {
     
 
 <Image
-  source={require('../assets/launch_logo.png')} // Make sure this path is correct
+  source={require('../assets/asset_logo.png')} // Make sure this path is correct
   style={styles.logo}
 />
     </Animated.View>

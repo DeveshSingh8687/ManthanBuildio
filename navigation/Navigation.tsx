@@ -10,6 +10,7 @@ import WelcomeScreen from '../screen/WalkThroughScreen1';
 import WelcomeScreen2 from '../screen/WalkThroughScreen2';
 import WelcomeScreen3 from '../screen/WalkThroughScreen3';
 import AddJobScreen from '../screen/PostJob';
+import PickJob from '../screen/PickJob';
 
 const Stack = createNativeStackNavigator();
 export type RootStackParamList = {
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   Welcome2:undefined;
   Welcome3:undefined
   JobDetailS: undefined;
+  PickJob: undefined;
 };
 
 export default function Navigation() {
@@ -37,6 +39,7 @@ export default function Navigation() {
           <Stack.Screen name="ForgotPassword" component={ForgetPassword} options={{ headerShown: false }} />
           <Stack.Screen name="HomeScreen" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="JobDetailS" component={AddJobScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="PickJob" component={PickJob} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     );

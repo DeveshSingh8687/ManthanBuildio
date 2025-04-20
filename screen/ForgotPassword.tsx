@@ -29,9 +29,9 @@ const ForgetPassword = () => {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back-ios" size={24} color="#333" />
-          </TouchableOpacity>
+             <TouchableOpacity style={styles.backButton} onPress={() => {navigation.goBack()}}>
+             <Icon name="arrow-back" size={28} color="#333" />
+             </TouchableOpacity>
 
           <Text style={styles.title}>Forget Password</Text>
 

@@ -14,7 +14,8 @@ import {
 import { Icon } from 'react-native-elements';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/Navigation'
-
+import ExploreMoreButton from './components/ExploreMoreButton';
+import PostFeed from './PickJob';
 const { height } = Dimensions.get('window');
 
 const HomeScreen = () => {
@@ -26,7 +27,7 @@ const HomeScreen = () => {
       user: 'Sadie Shelton',
       date: 'Jan 05, 2024',
       text: 'Just finished this challenging but rewarding renovation project. Loved the transformation!',
-      image: 'https://source.unsplash.com/featured/?kitchen',
+      image: 'https://picsum.photos/id/1/200/300',
       avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
     },
     {
@@ -34,7 +35,7 @@ const HomeScreen = () => {
       user: 'Sadie Shelton',
       date: 'Jan 05, 2024',
       text: 'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-      image: 'https://source.unsplash.com/featured/?stairs',
+      image: 'https://loremflicker.com',
       avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
     },
     {
@@ -42,7 +43,7 @@ const HomeScreen = () => {
       user: 'Sadie Shelton',
       date: 'Jan 05, 2024',
       text: 'Hiring experienced carpenters and roofers for upcoming projects. Contact us for more info!',
-      image: 'https://source.unsplash.com/featured/?construction',
+      image: 'https://picsum.photos/200/300.jpg',
       avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
     },
   ];
@@ -50,12 +51,11 @@ const HomeScreen = () => {
     // Navigate to PostJob screen
     navigation.navigate('JobDetailS');
   };
-  const renderPost = ({ item }:any) => (
+  const renderPost = ({ item }:any) => (   
     <View style={styles.postCard}>
       <Image source={{ uri: item.image }} style={styles.postImage} />
       <Text style={styles.postText}>{item.text}</Text>
       <View style={styles.userRow}>
-        <Image source={{ uri: item.avatar }} style={styles.avatarSmall} />
         <Text style={styles.userText}>
           By {item.user} • {item.date}
         </Text>
@@ -67,7 +67,7 @@ const HomeScreen = () => {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Image
-         source={require('../assets/launch_logo.png')}
+         source={require('../assets/asset_logo.png')}
           style={styles.logo}
         />
         <Icon name="person-outline" size={24} />
@@ -76,10 +76,10 @@ const HomeScreen = () => {
       <TextInput style={styles.search} placeholder="Search" />
 
       <View style={styles.cardRow}>
-      <TouchableOpacity style={styles.cardBtn}>
+      <TouchableOpacity style={styles.cardBtn} onPress={handlePress}>
         <View style={styles.cardContent}>
           <View>
-            <Text style={styles.cardTitle}>Post a task</Text>
+            <Text style={styles.cardTitle}>Post a job</Text>
             <Text style={styles.cardSubtitle}>Explore &gt;</Text>
           </View>
           <View style={styles.cardIcon}>
@@ -93,10 +93,10 @@ const HomeScreen = () => {
       </TouchableOpacity>
 
       {/* Pick a task card */}
-      <TouchableOpacity style={styles.cardBtn} onPress={handlePress}>
+      <TouchableOpacity style={styles.cardBtn}  onPress={() => navigation.navigate('PickJob')} >
         <View style={styles.cardContent}>
           <View>
-            <Text style={styles.cardTitle}>Pick a task</Text>
+            <Text style={styles.cardTitle}>Pick a Job</Text>
             <Text style={styles.cardSubtitle}>Explore &gt;</Text>
           </View>
           <View style={styles.cardIcon}>
@@ -111,7 +111,69 @@ const HomeScreen = () => {
 
 </View>
 
-      <Text style={styles.sectionTitle}>Recently posted</Text>
+<TouchableOpacity style={styles.recentlyPosted} onPress={() => navigation.navigate('PickJob')}>
+<View style={styles.leftSection}>
+<Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
+      <Text style={styles.buttonText} >News Section</Text>
+
+
+      </View>
+      </TouchableOpacity>
+      <FlatList
+        data={jobPosts}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderPost}
+        scrollEnabled={false}
+      />
+
+      {/* <View style={styles.jobItem}>
+          <View>
+            <Text style={styles.jobTitle}>Electrician</Text>
+            <Text style={styles.jobSubText}>Another day, another project! Working on a staircase today.</Text>
+            <Text style={styles.jobSubText}>#woodworking #craftsmanship </Text>
+          </View>
+          <Image
+            source={{ uri: 'https://randomuser.me/api/portraits/men/36.jpg' }}
+            style={styles.jobAvatar}
+          />
+        </View>
+        <View style={styles.jobItem}>
+          <View>
+            <Text style={styles.jobTitle}>Electrician</Text>
+            <Text style={styles.jobSubText}>Another day, another project! Working on a staircase today.</Text>
+            <Text style={styles.jobSubText}>#woodworking #craftsmanship </Text>
+          </View>
+          <Image
+            source={{ uri: 'https://randomuser.me/api/portraits/men/37.jpg' }}
+            style={styles.jobAvatar}
+          />
+        </View> */}
+       <TouchableOpacity style={styles.exploreCard}>
+        <Text style={styles.exploreText}>
+          "Find reliable workers for construction needs"
+        </Text>
+        
+        <ExploreMoreButton onPress={() => console.log('Explore pressed')} />      </TouchableOpacity>
+      {/* <FlatList
+data={[...jobPosts, { id: 'explore-card' }]}
+keyExtractor={(item) => item.id}
+renderItem={({ item }) =>
+  item.id === 'explore-card' ? (
+    <ExploreCard onPress={handleExploreMore} />
+  ) : (
+    <PostCard item={item} />
+  )
+}
+contentContainerStyle={styles.list}
+/> */}
+<TouchableOpacity style={styles.recentlyPosted}  onPress={() => navigation.navigate('PickJob')}>
+<View style={styles.leftSection}>
+<Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
+      <Text style={styles.buttonText} >Recently posted</Text>
+      <Icon name="arrow-right" size={16} color="#fff" style={styles.rightIcon} />
+      <Text style={styles.moreText}>More</Text>
+      </View>
+      </TouchableOpacity>
 
       {/* Simulated job list */}
       <View style={styles.recentJobs}>
@@ -156,21 +218,23 @@ const HomeScreen = () => {
         <Text style={{ color: '#fff' }}>See All</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.exploreCard}>
+      {/* <FlatList
+        data={jobPosts}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={PostFeed}
+        scrollEnabled={false}
+      /> */}
+
+< >
+<PostFeed showBackButton={false} />
+    </>
+           <TouchableOpacity style={styles.exploreCard}>
         <Text style={styles.exploreText}>
           "Find reliable workers for construction needs"
         </Text>
         <Text style={styles.exploreButton}>Explore</Text>
       </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Social Feed</Text>
-
-      <FlatList
-        data={jobPosts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderPost}
-        scrollEnabled={false}
-      />
+      
 
       <View style={{ height: 100 }} />
       <View style={styles.bottomNav}>
@@ -209,7 +273,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logo: { width: 100, height: 30, resizeMode: 'contain', marginTop:20 },
+  logo: { width: 100, height: 70, resizeMode: 'contain', marginTop:10 },
   search: {
     marginVertical: 16,
     padding: 10,
@@ -217,10 +281,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop:20
   },
+  icon: {
+    marginRight: 8,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   cardRow: {
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'stretch',
+  },
+  moreText: {
+    color: '#fff',
+    fontSize: 14,
   },
   iconImage: {
     width: 100,
@@ -249,6 +324,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  buttonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   
   cardSubtitle: {
     color: 'white',
@@ -257,10 +337,21 @@ const styles = StyleSheet.create({
   },
   
   cardIcon: {
-    marginLeft: 12,
-    // Add styles for real image or icon if needed
+    marginLeft: 'auto'    // Add styles for real image or icon if needed
+  },
+  rightIcon: {  
+    marginLeft: 150  // Add styles for real image or icon if needed
   },
   sectionTitle: { marginTop: 24, fontWeight: 'bold', fontSize: 16 },
+  recentlyPosted: {
+    marginTop: 24, fontWeight: 'bold', fontSize: 16,
+    backgroundColor: '#C1C5D0',  paddingVertical: 12,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    borderRadius: 10,
+    shadowRadius: 3, },
+
   seeAll: {
     marginTop: 10,
     backgroundColor: '#6264A7',
