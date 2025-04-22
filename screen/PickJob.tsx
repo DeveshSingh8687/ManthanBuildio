@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FlatList,
   View,
@@ -41,75 +41,82 @@ const jobPosts = [
   },
 ];
 
-const PostCard = ({ item }: any) => (
-  <TouchableOpacity style={styles.card}>
-    <View style={styles.header}>
-      <Image
-        source={{
-          uri: 'https://randomuser.me/api/portraits/women/65.jpg',
-        }}
-        style={styles.avatar}
-      />
-      <View>
-        <Text style={styles.name}>{item.user}</Text>
-        <Text style={styles.date}>{item.date}</Text>
-      </View>
-    </View>
-    <Image source={{ uri: item.image }} style={styles.postImage} />
-    <Text style={styles.content}>{item.content}</Text>
-  </TouchableOpacity>
-);
+const PostCard = ({ item, showLikeAndShare }: any) => {
+  const [likes, setLikes] = useState(0);
 
-// 🧩 PostFeed now accepts props: showBackButton and onBackPress
+  const handleLike = () => {
+    setLikes(likes + 1);
+  };
+
+  return (
+    <TouchableOpacity style={styles.card}>
+      <View style={styles.header}>
+        <Image
+          source={{
+            uri: 'https://randomuser.me/api/portraits/women/65.jpg',
+          }}
+          style={styles.avatar}
+        />
+        <View>
+          <Text style={styles.name}>{item.user}</Text>
+          <Text style={styles.date}>{item.date}</Text>
+        </View>
+      </View>
+      <Image source={{ uri: item.image }} style={styles.postImage} />
+      <Text style={styles.content}>{item.content}</Text>
+      {!showLikeAndShare && (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
+            <Icon name="thumb-up" size={20} color="#6264A7" />
+            <Text style={styles.buttonLabel}>{likes}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton}>
+            <Icon name="share" size={20} color="#6264A7" />
+            <Text style={styles.buttonLabel}>Share</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+// 🧩 PostFeed now accepts props: heading, showBackButton, and onBackPress
 export default function PostFeed({
+  heading = 'Job Posts', // Default heading
   showBackButton = true,
   onBackPress = () => {},
 }: {
+  heading?: string;
   showBackButton?: boolean;
   onBackPress?: () => void;
-}) 
+}) {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-{
-    const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  
   return (
-    <><View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       {showBackButton && (
-        <TouchableOpacity style={styles.backButton} onPress={() => { navigation.goBack(); } }>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            navigation.goBack();
+          }}
+        >
           <Icon name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
       )}
+      
+      {/* Add Heading */}
+      <Text style={styles.heading}>{heading}</Text>
+
       <FlatList
         data={jobPosts}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PostCard item={item} />}
-        contentContainerStyle={styles.list} />
-    </View><View style={{ height: 100 }} /><View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="home" size={24} color="#6264A7" />
-          <Text style={styles.navLabel}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="event-note" size={24} color="#888" />
-          <Text style={styles.navLabel}>Booking</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.fab}>
-          <Icon name="add" size={28} color="#fff" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="chat" size={24} color="#888" />
-          <Text style={styles.navLabel}>Chat</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="notifications-none" size={24} color="#888" />
-          <Text style={styles.navLabel}>Notify</Text>
-        </TouchableOpacity>
-      </View></>
-    
+        renderItem={({ item }) => (
+          <PostCard item={item} showLikeAndShare={showBackButton} />
+        )}
+        contentContainerStyle={styles.list}
+      />
+    </View>
   );
 }
 
@@ -121,7 +128,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 16,
+    marginBottom: 6,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -131,39 +138,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 8,
     alignItems: 'center',
-  },
-  fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#6264A7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    height: 70,
-    paddingBottom: 10,
-    zIndex: 10,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   avatar: {
     width: 40,
@@ -196,12 +170,28 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 8,
   },
-  navLabel: {
-    fontSize: 10,
-    marginTop: 2,
-    color: '#888',
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
   },
-  backButtonText: {
-    fontSize: 16,
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonLabel: {
+    marginLeft: 5,
+    fontSize: 12,
+    color: '#6264A7',
   },
 });

@@ -15,6 +15,7 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/Navigation'
 
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import JobCategoryList from './components/DropDown';
 
 const AddJobScreen = () => {
   const [jobTypeOpen, setJobTypeOpen] = useState(false);
@@ -99,7 +100,7 @@ const AddJobScreen = () => {
                 </View>
               );
             })}
-
+             <JobCategoryList/>
             {/* Image Upload Section */}
             <View style={styles.inputCard}>
               <Text style={styles.label}>Add image</Text>

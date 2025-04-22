@@ -224,16 +224,18 @@ contentContainerStyle={styles.list}
         renderItem={PostFeed}
         scrollEnabled={false}
       /> */}
-
-< >
-<PostFeed showBackButton={false} />
-    </>
-           <TouchableOpacity style={styles.exploreCard}>
+<PostFeed showBackButton={false}  />
+    <TouchableOpacity style={styles.exploreCard}>
+        <Text style={styles.exploreText}>
+          "Find reliable workers for construction needs"
+        </Text>
+        
+        <ExploreMoreButton onPress={() => console.log('Explore pressed')} />      </TouchableOpacity>           {/* <TouchableOpacity style={styles.exploreCard}>
         <Text style={styles.exploreText}>
           "Find reliable workers for construction needs"
         </Text>
         <Text style={styles.exploreButton}>Explore</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
       
 
       <View style={{ height: 100 }} />
@@ -362,7 +364,7 @@ const styles = StyleSheet.create({
   exploreCard: {
     backgroundColor: '#f4f6ff',
     padding: 20,
-    marginTop: 20,
+    marginTop: 15,
     borderRadius: 10,
   },
   exploreText: { fontWeight: 'bold', marginBottom: 10 },

@@ -29,7 +29,7 @@ export type RootStackParamList = {
 export default function Navigation() {
     return (
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Launch">
+        <Stack.Navigator initialRouteName="HomeScreen">
         <Stack.Screen name="Launch" component={LaunchScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome2" component={WelcomeScreen2} options={{ headerShown: false }} />
