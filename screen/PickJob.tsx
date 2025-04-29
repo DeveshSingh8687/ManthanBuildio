@@ -10,6 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/Navigation';
+import BottomTabBar from './components/BottomNavigaionBar';
 
 const jobPosts = [
   {
@@ -47,9 +48,10 @@ const PostCard = ({ item, showLikeAndShare }: any) => {
   const handleLike = () => {
     setLikes(likes + 1);
   };
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity style={styles.card}    >
       <View style={styles.header}>
         <Image
           source={{
@@ -76,7 +78,20 @@ const PostCard = ({ item, showLikeAndShare }: any) => {
           </TouchableOpacity>
         </View>
       )}
+          {/* Apply Button */}
+          {showLikeAndShare && (
+  <View style={styles.buttonRow}>
+    <TouchableOpacity style={styles.viewMoreButton} onPress={() => {
+      navigation.navigate('JobDetailsScreen')
+    }}>
+      <Text style={styles.viewMoreButtonText}>View More</Text>
     </TouchableOpacity>
+    <TouchableOpacity style={styles.applyButton}>
+      <Text style={styles.applyButtonText}>Apply</Text>
+    </TouchableOpacity>
+  </View>
+)}
+  </TouchableOpacity>
   );
 };
 
@@ -85,44 +100,71 @@ export default function PostFeed({
   heading = 'Job Posts', // Default heading
   showBackButton = true,
   onBackPress = () => {},
+  showHeader = true,
 }: {
   heading?: string;
   showBackButton?: boolean;
   onBackPress?: () => void;
+  showHeader?: boolean;
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [activeTab, setActiveTab] = useState<'My Jobs' | 'Applied Jobs'>('My Jobs');
 
   return (
-    <View style={{ flex: 1 }}>
-      {showBackButton && (
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => {
-            navigation.goBack();
-          }}
-        >
-          <Icon name="arrow-back" size={28} color="#333" />
-        </TouchableOpacity>
-      )}
-      
-      {/* Add Heading */}
-      <Text style={styles.heading}>{heading}</Text>
-
-      <FlatList
-        data={jobPosts}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <PostCard item={item} showLikeAndShare={showBackButton} />
+<View style={{ flex: 1 }}>
+    {(showBackButton && (
+      <>
+        <View style={styles.headerLogo}>
+          <Image
+            source={require('../assets/asset_logo.png')}
+            style={styles.logo}
+          />
+          <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('AccountScreen')}>
+            <Icon name="person-outline" size={24} />
+          </TouchableOpacity>
+          {/* <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} /> */}
+        </View>
+        {showBackButton && (
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                navigation.goBack();
+              }}
+            >
+              <Icon name="arrow-back" size={28} color="#333" />
+            </TouchableOpacity>
+            {showBackButton && <Text style={styles.heading}>{heading}</Text>}
+          </View>
         )}
-        contentContainerStyle={styles.list}
-      />
-    </View>
+      </>
+    ))}
+
+    <FlatList
+      data={jobPosts}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <PostCard item={item} showLikeAndShare={showBackButton} />
+      )}
+      contentContainerStyle={styles.list}
+    />
+    {showHeader && <View style={{ height: 100 }} />}
+    {showHeader && <BottomTabBar />}
+</View>
   );
 }
 
 const styles = StyleSheet.create({
   list: {
     padding: 16,
+    backgroundColor: '#fff'
+
+  },
+  headerLogo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff'
   },
   card: {
     backgroundColor: 'white',
@@ -134,10 +176,16 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+  logo: { width: 100, height: 100, resizeMode: 'contain', marginTop:10,  alignSelf: 'flex-end', padding: 10},
+  profileButton:{marginRight: 10, padding: 10, borderRadius: 8},
+
+
   header: {
     flexDirection: 'row',
     marginBottom: 8,
     alignItems: 'center',
+    backgroundColor: '#fff'
+
   },
   avatar: {
     width: 40,
@@ -159,22 +207,51 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginVertical: 10,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  
+  viewMoreButton: {
+    backgroundColor: '#f2f2f2',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8, // space between buttons
+    alignItems: 'center',
+  },
+  
+  viewMoreButtonText: {
+    color: '#6264A7',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  
+  applyButton: {
+    backgroundColor: '#6264A7',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+  },
   content: {
     fontSize: 14,
     color: '#333',
   },
   backButton: {
-    padding: 10,
-    backgroundColor: '#f2f2f2',
-    alignSelf: 'flex-start',
-    margin: 16,
+    // marginTop: 10,
+    padding: 8,
+    // backgroundColor: '#f2f2f2',
     borderRadius: 8,
   },
   heading: {
-    fontSize: 24,
+    // marginTop:10,
+    marginLeft: 10,          // add left space after back button
+    fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 20,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -193,5 +270,25 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontSize: 12,
     color: '#6264A7',
+  },
+  // applyButton: {
+  //   backgroundColor: '#6264A7',
+  //   paddingVertical: 10,
+  //   borderRadius: 8,
+  //   marginTop: 12,
+  //   alignItems: 'center',
+  // },
+  applyButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  headerContainer: {
+    flexDirection: 'row',     // horizontal layout
+    alignItems: 'center',     // vertical center
+    padding: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    // marginBottom: 8,          // small space after header
   },
 });

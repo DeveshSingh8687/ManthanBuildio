@@ -15,7 +15,7 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/Navigation'
 
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import JobCategoryList from './components/DropDown';
+import CustomJobSelector from './components/MultiSelectDropDown';
 
 const AddJobScreen = () => {
   const [jobTypeOpen, setJobTypeOpen] = useState(false);
@@ -30,14 +30,12 @@ const AddJobScreen = () => {
   
 
   const fields = [
-    'Description',
-    'Requirements',
-    'Job location',
-    'Job position',
-    'Job Status',
-    'Experience',
-    'Deadline',
-    'Budget',
+    'Name',
+    'Email',
+    'Phone Number',
+    'Job Type',
+    'About',
+    'Experince',
   ];
 
   const isMultiline = (label: string) =>
@@ -65,7 +63,7 @@ const AddJobScreen = () => {
                 <Text style={styles.cancelText}>Cancel</Text>
               </View>
 
-              <Text style={styles.title}>Add a job</Text>
+              <Text style={styles.title}>Edit User</Text>
 
               <View style={styles.rightSection}>
                 <TouchableOpacity>
@@ -100,7 +98,7 @@ const AddJobScreen = () => {
                 </View>
               );
             })}
-             <JobCategoryList/>
+             <CustomJobSelector/>
             {/* Image Upload Section */}
             <View style={styles.inputCard}>
               <Text style={styles.label}>Add image</Text>
@@ -160,7 +158,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6264A7',
     marginTop: 10,
   },
   inputCard: {

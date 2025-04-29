@@ -11,7 +11,10 @@ import WelcomeScreen2 from '../screen/WalkThroughScreen2';
 import WelcomeScreen3 from '../screen/WalkThroughScreen3';
 import AddJobScreen from '../screen/PostJob';
 import PickJob from '../screen/PickJob';
-
+import NewsScreen from '../screen/NewsScreen';
+import JobDetailsScreen from '../screen/JobDetailsScreen';
+import AccountScreen from '../screen/UserDetailsScreen';
+import UserDetailScreen from '../screen/UserDetailForm';
 const Stack = createNativeStackNavigator();
 export type RootStackParamList = {
   HomeScreen: undefined; // Add other screens here as needed
@@ -24,12 +27,16 @@ export type RootStackParamList = {
   Welcome3:undefined
   JobDetailS: undefined;
   PickJob: undefined;
+  NewsScreen: undefined;
+  JobDetailsScreen: undefined;
+  AccountScreen: undefined;
+  UserDetailScreen:undefined
 };
 
 export default function Navigation() {
     return (
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="HomeScreen">
+        <Stack.Navigator initialRouteName="Launch">
         <Stack.Screen name="Launch" component={LaunchScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome2" component={WelcomeScreen2} options={{ headerShown: false }} />
@@ -40,6 +47,15 @@ export default function Navigation() {
           <Stack.Screen name="HomeScreen" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="JobDetailS" component={AddJobScreen} options={{ headerShown: false }} />
           <Stack.Screen name="PickJob" component={PickJob} options={{ headerShown: false }} />
+          <Stack.Screen name="NewsScreen" component={NewsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="JobDetailsScreen" component={JobDetailsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AccountScreen" component={AccountScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="UserDetailScreen" component={UserDetailScreen} options={{ headerShown: false }} />
+
+
+
+          
+
         </Stack.Navigator>
       </NavigationContainer>
     );

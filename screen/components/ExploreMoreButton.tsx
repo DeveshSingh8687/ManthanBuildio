@@ -9,9 +9,10 @@ import {
 
 interface ExploreMoreButtonProps {
   onPress: () => void;
+  text: string;
 }
 
-const ExploreMoreButton: React.FC<ExploreMoreButtonProps> = ({ onPress }) => {
+const ExploreMoreButton: React.FC<ExploreMoreButtonProps> = ({ onPress ,text }) => {
   return (
     <ImageBackground
       source={{
@@ -21,7 +22,7 @@ const ExploreMoreButton: React.FC<ExploreMoreButtonProps> = ({ onPress }) => {
       imageStyle={styles.imageBackground}
     >
       <TouchableOpacity style={styles.button} onPress={onPress}>
-        <Text style={styles.buttonText}>Know More</Text>
+        <Text style={styles.buttonText}>{text}</Text>
       </TouchableOpacity>
     </ImageBackground>
   );
@@ -33,7 +34,7 @@ const styles = StyleSheet.create({
   exploreCard: {
     // height: 100,
     borderRadius: 12,
-    marginVertical: 20,
+    marginVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',

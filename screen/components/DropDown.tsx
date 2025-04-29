@@ -205,7 +205,7 @@ const jobCategories = [
     closeButton: {
       marginTop: 16,
       padding: 12,
-      backgroundColor: '#007AFF',
+      backgroundColor: '#6264A7',
       alignItems: 'center',
       borderRadius: 8,
     },

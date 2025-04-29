@@ -40,7 +40,7 @@ export default function LoginScreen() {
     }
 
     if (email === mockEmail && password === mockPassword) {
-      Alert.alert('Success', 'Login successful!');
+      // Alert.alert('Success', 'Login successful!');
       navigation.navigate('HomeScreen'); // No more type errors
     } else {
       Alert.alert('false');
