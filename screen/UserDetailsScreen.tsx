@@ -8,14 +8,17 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/Navigation';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
+import {RootStackParamList} from '../navigation/Navigation';
+import BottomTabBar from './components/BottomNavigaionBar';
+import TopBar from './components/TopBar';
 
 const profileData = {
   name: 'John Doe',
   email: 'john.doe@example.com',
   phone: '+1234567890',
-  about: 'Experienced software developer with a passion for building great mobile apps.',
+  about:
+    'Experienced software developer with a passion for building great mobile apps.',
   job: 'Software Developer',
   profilePhoto: 'https://i.pravatar.cc/150?img=3',
 };
@@ -43,22 +46,27 @@ const AccountScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <><TopBar /><ScrollView><View style={styles.container}>
+
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={handleBackPress}>
           <Icon name="arrow-back" size={24} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>User Details</Text>
-        <View style={{ width: 24 }} /> {/* empty view to balance center title */}
-      </View>
+        <View style={{ width: 24 }} /> 
+      </View> */}
 
       {/* Main Content */}
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageWrapper}>
-            <Image source={{ uri: profileData.profilePhoto }} style={styles.profileImage} />
+            <Image
+              source={{ uri: profileData.profilePhoto }}
+              style={styles.profileImage} />
             <TouchableOpacity style={styles.editIcon} onPress={handleEditPress}>
               <Icon name="pencil" size={16} color="#fff" />
             </TouchableOpacity>
@@ -72,8 +80,6 @@ const AccountScreen = () => {
         {renderRow('Notifications')}
         {renderRow('Privacy & Security')}
         {renderRow('About Buildio')}
-      
-
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -81,24 +87,25 @@ const AccountScreen = () => {
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </View></ScrollView><BottomTabBar /></>
+
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
-    paddingHorizontal: 16,
-    
+    backgroundColor: '#fff',
+    // paddingHorizontal: 16,
   },
   header: {
     flexDirection: 'row',
-    paddingTop: 60,
-    paddingHorizontal: 16,
+    paddingTop: 40,
+    // paddingHorizontal: 16,
+    marginTop: 30,
     paddingBottom: 10,
     // justifyContent: 'space-between',
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FFF',
   },
   headerTitle: {
     fontSize: 20,

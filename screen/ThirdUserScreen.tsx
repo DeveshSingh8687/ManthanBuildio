@@ -8,7 +8,7 @@ import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 
 const jobData = {
-  Name: 'Carpenter (Cabinetry Specialist)',
+  Name: 'Elisha Conwell',
   imageUrl: 'https://i.pravatar.cc/100',
   description:
     'Seeking a highly skilled carpenter with expertise in custom cabinetry. Experience with design, fabrication, and installation is essential.',
@@ -22,16 +22,15 @@ const jobData = {
   location: 'Auckland, New Zealand',
   coords: { latitude: -36.8485, longitude: 174.7633 },
   info: {
-    'Job Position': 'Carpenter(Cabinetry Specialist)',
+    'Email': 'john.doe@example.com',
+    'Phone Number': '+64 21 123 4567',
     'Job Type': ['Full-Time', 'Remote', 'Contract'],
-    'Job Status': 'Active',
+    'About': 'Experienced carpenter with a focus on cabinetry and fine woodworking.',
     'Experience': '5 Years',
-    'Deadline': 'Project Completion Date: 2023-12-31',
-    'Budget': 'E$40 -$50 per hour',
   },
 };
 
-const JobDetailsScreen = ({ navigation }) => {
+const UserScreen = () => {
   const [region] = React.useState({
     latitude: jobData.coords.latitude,
     longitude: jobData.coords.longitude,
@@ -39,7 +38,7 @@ const JobDetailsScreen = ({ navigation }) => {
     longitudeDelta: 0.01,
   });
 
-  // const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (
     <><TopBar/><ScrollView style={styles.container}>
@@ -54,12 +53,12 @@ const JobDetailsScreen = ({ navigation }) => {
               </TouchableOpacity>
           </View> */}
 
-          <View style={styles.header}>
-              {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          {/* <View style={styles.header}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                   <Icon name="arrow-back" size={24} color="#333" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>User Profile</Text> */}
-          </View>
+              <Text style={styles.headerTitle}>User Profile</Text>
+          </View> */}
 
           {/* Title Card */}
           <View style={styles.titleCardWrapper}>
@@ -109,20 +108,22 @@ const JobDetailsScreen = ({ navigation }) => {
                       <View style={styles.infoDivider} />
                   </View>
               ))}
+          <TouchableOpacity style={styles.applyBtn}>
+              <Text style={styles.applyText}>Chat</Text>
+          </TouchableOpacity>
           </View>
 
           {/* Apply Button */}
-          <TouchableOpacity style={styles.applyBtn}>
-              <Text style={styles.applyText}>Apply</Text>
-          </TouchableOpacity>
 
-      </ScrollView><BottomTabBar /></>
+      </ScrollView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 16 },
 
+ 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -243,4 +244,4 @@ const styles = StyleSheet.create({
 
 });
 
-export default JobDetailsScreen;
+export default UserScreen;

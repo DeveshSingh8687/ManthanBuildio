@@ -4,6 +4,8 @@ import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity, ScrollView }
 import { RootStackParamList } from '../navigation/Navigation';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import BottomTabBar from './components/BottomNavigaionBar';
+import { NavPopup } from './components/Modal';
+import TopBar from './components/TopBar';
 
 const jobPosts = [
   {
@@ -19,7 +21,7 @@ const jobPosts = [
     user: 'Sadie Shelton',
     date: 'Jan 05, 2024',
     text: 'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-    image: 'https://loremflicker.com',
+    image: 'https://picsum.photos/200/300.jpg',
     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
   },
   {
@@ -58,18 +60,21 @@ export default function NewsFeed({
   showHeading?: boolean;
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [modalVisible, setModalVisible] = React.useState(false);
 
   return (
     <View style={styles.container}>
-         {(showHeading&&<><View style={styles.header}>
+         {(showHeading&&<>
+         <TopBar/>
+         {/* <View style={styles.header}>
         <Image
           source={require('../assets/asset_logo.png')}
           style={styles.logo} />
-        <TouchableOpacity style={styles.profileButton}onPress={() => navigation.navigate('AccountScreen')}>
+        <TouchableOpacity style={styles.profileButton}onPress={() => setModalVisible(true)}>
           <Icon name="person-outline" size={24} />
         </TouchableOpacity>
-        {/* <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />    */}
-      </View>
+        <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />   
+      </View> */}
       <ScrollView style={styles.container}></ScrollView></>)}
       
       {/* Top Bar */}

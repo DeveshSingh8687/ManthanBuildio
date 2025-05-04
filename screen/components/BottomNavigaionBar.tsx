@@ -2,13 +2,14 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '../../navigation/Navigation'
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RootStackParamList } from '../../navigation/Navigation';
 
 const BottomTabBar = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { paddingBottom: insets.bottom || 40 }]}>
       <TouchableOpacity style={styles.navItem}>
         <Icon name="home-outline" size={24} color="#6264A7" />
         <Text style={styles.navLabel}>Home</Text>
@@ -48,8 +49,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#ddd',
-    height: 70,
-    paddingBottom: 10,
+    height: 90,
     zIndex: 10,
   },
   fab: {
@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 10,
   },
   navLabel: {
     fontSize: 10,
@@ -78,3 +79,4 @@ const styles = StyleSheet.create({
 });
 
 export default BottomTabBar;
+export { BottomTabBar };

@@ -9,12 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {
-  NavigationProp,
-  RouteProp,
-  useNavigation,
-  useRoute,
-} from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
+import {NavigationProp} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import {NavPopup} from './components/Modal';
@@ -49,24 +45,9 @@ const jobPosts = [
   },
 ];
 
-const PostCard = ({
-  item,
-  showLikeAndShare,
-  showButtonText,
-  showLikeAndShareButton,
-}: any) => {
+const PostCard = ({item}: {item: any}) => {
   const [likes, setLikes] = useState(0);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
-  const handleLike = () => setLikes(prev => prev + 1);
-
-  const handleClick = () => {
-    if (showButtonText === 'Applications') {
-      navigation.navigate('JobListComponent');
-    } else {
-      Alert.alert('Title', 'This is an alert message');
-    }
-  };
 
   return (
     <TouchableOpacity style={styles.card}>
@@ -84,97 +65,64 @@ const PostCard = ({
       <Image source={{uri: item.image}} style={styles.postImage} />
       <Text style={styles.content}>{item.content}</Text>
 
-      {!showLikeAndShare && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
-            <Icon name="thumb-up" size={20} color="#6264A7" />
-            <Text style={styles.buttonLabel}>{likes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.shareButton}>
-            <Icon name="share" size={20} color="#6264A7" />
-            <Text style={styles.buttonLabel}>Share</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {(showLikeAndShare || showLikeAndShareButton) && (
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.viewMoreButton}
-            onPress={() => navigation.navigate('JobDetailsScreen')}>
-            <Text style={styles.viewMoreButtonText}>View More</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.applyButton} onPress={handleClick}>
-            <Text style={styles.applyButtonText}>
-              {showButtonText || 'Apply'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => setLikes(prev => prev + 1)}>
+          <Icon name="thumb-up" size={20} color="#6264A7" />
+          <Text style={styles.buttonLabel}>{likes}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.shareButton}>
+          <Icon name="share" size={20} color="#6264A7" />
+          <Text style={styles.buttonLabel}>Share</Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 };
 
-export default function PostFeed({
-  heading = 'Job Posts',
-  showBackButton = true,
-  onBackPress = () => {},
-  showBottomBar = true,
-  showButtonText,
-  showHeader = true,
-  showLikeAndShare = true,
-}: {
-  heading?: string;
-  showBackButton?: boolean;
-  onBackPress?: () => void;
-  showBottomBar?: boolean;
-  showButtonText?: string;
-  showHeader?: boolean;
-  showLikeAndShare?: boolean;
-}) {
+export default function Feed() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const route =
-    useRoute<RouteProp<RootStackParamList, keyof RootStackParamList>>();
   const [modalVisible, setModalVisible] = React.useState(false);
-
-  const {showLikeAndShareButton, showHeading} = (route.params || {}) as {
-    showLikeAndShareButton?: boolean;
-    showHeading?: string;
-  };
 
   return (
     <View style={{flex: 1}}>
-      {(showHeader || showLikeAndShareButton) && (
-             <TopBar />
-      )}
-  {showBackButton && (
-            <View style={styles.headerContainer}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Icon name="arrow-back" size={28} color="#333" />
-              </TouchableOpacity>
-              <Text style={styles.heading}>{heading}</Text>
-            </View>
-          )}
+      {/* Header with logo and profile */}
+      {/* <View style={styles.headerLogo}>
+        <Image
+          source={require('../assets/asset_logo.png')}
+          style={styles.logo}
+        />
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => setModalVisible(true)}>
+          <Icon name="person-outline" size={24} />
+        </TouchableOpacity>
+      </View> */}
+      <TopBar/>
+      <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
+
+      {/* Back button and heading */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.heading}>Feed</Text>
+      </View>
+
+      {/* Feed */}
       <FlatList
         data={jobPosts}
         keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <PostCard
-            item={item}
-            showLikeAndShare={showLikeAndShare}
-            showButtonText={showButtonText}
-            showLikeAndShareButton={showLikeAndShareButton}
-          />
-        )}
+        renderItem={({item}) => <PostCard item={item} />}
         contentContainerStyle={styles.list}
       />
 
-      {(showBottomBar || showLikeAndShareButton) && (
-        <>
-          <View style={{height: 100}} />
-          <BottomTabBar />
-        </>
-      )}
+      {/* Bottom navigation */}
+      <View style={{height: 100}} />
+      <BottomTabBar />
     </View>
   );
 }
@@ -212,7 +160,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
-    marginTop: 5,
   },
   header: {
     flexDirection: 'row',
