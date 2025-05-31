@@ -5,7 +5,7 @@ export const _signInWithGoogle = async () => {
   try {
     GoogleSignin.configure({
       offlineAccess: false,
-      webClientId: '1008533442966-fi407kv4vf3n272nj9di3nem6k3tia29.apps.googleusercontent.com',
+      webClientId: '1008533442966-5p587gaghdl2jd5a5f9tps74jo9ojhue.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
     });
 

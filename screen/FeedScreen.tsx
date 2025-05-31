@@ -15,7 +15,7 @@ import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import {NavPopup} from './components/Modal';
 import TopBar from './components/TopBar';
-
+// test rj
 const jobPosts = [
   {
     id: '1',

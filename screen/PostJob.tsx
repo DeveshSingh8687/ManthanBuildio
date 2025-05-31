@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: 'rgba(255, 0, 0, 0.8)',
+    backgroundColor: '#6264A7',
     borderRadius: 12,
     padding: 2,
   },
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   imageButton: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#6264A7',
     padding: 12,
     borderRadius: 8,
   },

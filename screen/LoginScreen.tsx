@@ -37,65 +37,43 @@ export default function LoginScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  useEffect(() => {
-  const checkIfUserLoggedIn = async () => {
-    try {
-      const userId = await AsyncStorage.getItem('USERID');
-      console.log('User ID from AsyncStorage:', userId);
-      if (userId) {
-        console.log('User already logged in:', userId);
-        navigation.navigate('HomeScreen');
-      }
-      else{
-        console.log('No user logged in, navigating to LoginScreen');
-        navigation.navigate('Login');
-      }
-    } catch (error) {
-      console.log('Error checking user login status:', error);
-    }
-  };
 
-  checkIfUserLoggedIn();
-}, []);
 
-  const handleLogin = () => {
-    fireStore()
-      .collection('users')
-      .where('email', '==', email)
-      .get()
-      .then(res => {
-        console.log('res', res);
-        if (res.docs !== null) {
+const handleLogin = () => {
+  if (!email || !password) {
+    Alert.alert('Error', 'Please enter both email and password');
+    return;
+  }
+
+  fireStore()
+    .collection('users')
+    .where('email', '==', email)
+    .get()
+    .then(res => {
+      console.log('res', res);
+      if (!res.empty) {
+        const userData = res.docs[0].data();
+        const userPassword = userData.password;
+
+        if (userPassword === password) {
           goToNext(
-            res.docs[0].data().firstName,
-            res.docs[0].data().email,
+            userData.firstName,
+            userData.email,
             res.docs[0].id,
           );
+        } else {
+          Alert.alert('Error', 'Incorrect password');
         }
-      })
-      .catch(err => {
-        console.log('Error fetching user:', err);
+      } else {
         Alert.alert('Error', 'User not found');
-      });
+      }
+    })
+    .catch(err => {
+      console.log('Error fetching user:', err);
+      Alert.alert('Error', 'Login failed. Please try again.');
+    });
+};
 
-    // const mockEmail = 'test@example.com';
-    // const mockPassword = 'password123';
-
-    // if (!email || !password) {
-    //   // setSnackMessage('Please enter both email and password');
-    //   // setSnackVisible(true);
-    //   Alert.alert('enter email', );
-    //   return;
-    // }
-
-    // if (email === mockEmail && password === mockPassword) {
-    //   // Alert.alert('Success', 'Login successful!');
-    //   navigation.navigate('HomeScreen'); // No more type errors
-    // } else {
-    //   Alert.alert('false');
-    // }
-    // setSnackVisible(true);
-  };
 
   const goToNext = async (name: any, email: any, userId: string) => {
     await AsyncStorage.setItem('USERID', userId);

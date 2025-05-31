@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "1008533442966-difnecbhg9bquvuajt5cj819k8croqf4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.buildio",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "1008533442966-fi407kv4vf3n272nj9di3nem6k3tia29.apps.googleusercontent.com",
           "client_type": 3
         }
