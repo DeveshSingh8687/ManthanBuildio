@@ -9,11 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useNavigation} from '@react-navigation/native';
-import {NavigationProp} from '@react-navigation/native';
+import {
+  NavigationProp,
+  useNavigation,
+} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
-import {NavPopup} from './components/Modal';
 import TopBar from './components/TopBar';
 
 const jobPosts = [
@@ -45,9 +46,11 @@ const jobPosts = [
   },
 ];
 
-const PostCard = ({item}: {item: any}) => {
+const PostCard = ({item}: any) => {
   const [likes, setLikes] = useState(0);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const handleLike = () => setLikes(prev => prev + 1);
 
   return (
     <TouchableOpacity style={styles.card}>
@@ -66,9 +69,7 @@ const PostCard = ({item}: {item: any}) => {
       <Text style={styles.content}>{item.content}</Text>
 
       <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={styles.likeButton}
-          onPress={() => setLikes(prev => prev + 1)}>
+        <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
           <Icon name="thumb-up" size={20} color="#6264A7" />
           <Text style={styles.buttonLabel}>{likes}</Text>
         </TouchableOpacity>
@@ -81,48 +82,32 @@ const PostCard = ({item}: {item: any}) => {
   );
 };
 
-export default function Feed() {
+export default function MyProfile({heading = 'Job Posts'}: {heading?: string}) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [modalVisible, setModalVisible] = React.useState(false);
 
   return (
     <View style={{flex: 1}}>
-      {/* Header with logo and profile */}
-      {/* <View style={styles.headerLogo}>
-        <Image
-          source={require('../assets/asset_logo.png')}
-          style={styles.logo}
-        />
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => setModalVisible(true)}>
-          <Icon name="person-outline" size={24} />
-        </TouchableOpacity>
-      </View> */}
-      <TopBar/>
-      <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
+      <TopBar />
 
-      {/* Back button and heading */}
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#6264A7" />
         </TouchableOpacity>
-        <Text style={styles.heading}>Feed</Text>
+        <Text style={styles.heading}>{heading}</Text>
       </View>
 
-      {/* Feed */}
       <FlatList
         data={jobPosts}
         keyExtractor={item => item.id}
         renderItem={({item}) => <PostCard item={item} />}
         contentContainerStyle={styles.list}
       />
-
-      {/* Bottom navigation */}
-      <View style={{height: 100}} />
-      <BottomTabBar />
+      <>
+        <View style={{height: 100}} />
+        <BottomTabBar />
+      </>
     </View>
   );
 }
@@ -160,6 +145,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
+    marginTop: 5,
   },
   header: {
     flexDirection: 'row',

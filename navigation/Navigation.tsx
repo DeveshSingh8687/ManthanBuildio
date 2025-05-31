@@ -19,9 +19,19 @@ import JobsSection from '../screen/JobsSection';
 import JobListComponent from '../screen/MyJoblistScreen'
 import UserScreen from '../screen/ThirdUserScreen';
 import Feed from '../screen/FeedScreen';
+import AddPostScreen from '../screen/AddFeed';
+import ManageAddressScreen from '../screen/Fields/AddAddressScreen';
+import ManagePaymentMethodsScreen from '../screen/Fields/AddCard';
+import AboutUsScreen from '../screen/Fields/AboutUs';
+import NotificationsScreen from '../screen/Fields/NotificationSceen';
+import PrivacySecurity from '../screen/Fields/PrivacySecurityScreen';
+import ChatListScreen from '../screen/ChatListScreen';
+import ChatDetailScreen from '../screen/ChatDetailScreen';
+import ResetPassword from '../screen/Fields/ResetPasswordScreen';
+import MyProfile from '../screen/MyProfileScreen';
 const Stack = createNativeStackNavigator();
 export type RootStackParamList = {
-  HomeScreen: undefined; // Add other screens here as needed
+HomeScreen: undefined
   Login: undefined;
   ForgotPassword: undefined;
   SignUp: undefined;
@@ -40,13 +50,27 @@ export type RootStackParamList = {
   JobListComponent:undefined;
   UserScreen: undefined;
   Feed: undefined;
+  AddPostScreen: undefined;
+  ManageAddressScreen: undefined;
+  ManagePaymentMethodsScreen: undefined;
+  AboutUsScreen: undefined;
+  NotificationsScreen: undefined;
+  PrivacySecurity: undefined;
+  ChatListScreen: undefined;
+  ChatDetailScreen: {
+    myChatId: string;
+    data:any
+  };
+  ResetPassword: undefined;
+  MyProfile: undefined;
+  
 
 };
 
 export default function Navigation() {
     return (
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="HomeScreen">
+        <Stack.Navigator initialRouteName="Login">
         <Stack.Screen name="Launch" component={LaunchScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Welcome2" component={WelcomeScreen2} options={{ headerShown: false }} />
@@ -64,8 +88,17 @@ export default function Navigation() {
           <Stack.Screen name="JobsSection" component={JobsSection} options={{ headerShown: false }} />  
           <Stack.Screen name="JobListComponent" component={JobListComponent} options={{ headerShown: false }} /> 
           <Stack.Screen name="UserScreen" component={UserScreen} options={{ headerShown: false }} />   
-          <Stack.Screen name="Feed" component={Feed} options={{ headerShown: false }} />               
-            
+          <Stack.Screen name="Feed" component={Feed} options={{ headerShown: false }} />  
+          <Stack.Screen name="AddPostScreen" component={AddPostScreen} options={{ headerShown: false }} />   
+          <Stack.Screen name="ManageAddressScreen" component={ManageAddressScreen} options={{ headerShown: false }} /> 
+          <Stack.Screen name="ManagePaymentMethodsScreen" component={ManagePaymentMethodsScreen} options={{ headerShown: false }} />   
+          <Stack.Screen name="AboutUsScreen" component={AboutUsScreen} options={{ headerShown: false }} />  
+          <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} options={{ headerShown: false }} />   
+          <Stack.Screen name="PrivacySecurity" component={PrivacySecurity} options={{ headerShown: false }} /> 
+          <Stack.Screen name="ChatListScreen" component={ChatListScreen} options={{ headerShown: false }} />  
+          <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ResetPassword" component={ResetPassword} options={{ headerShown: false }} />
+          <Stack.Screen name="MyProfile" component={MyProfile} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     );

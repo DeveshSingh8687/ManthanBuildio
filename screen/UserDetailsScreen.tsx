@@ -6,6 +6,9 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
@@ -38,58 +41,82 @@ const AccountScreen = () => {
     console.log('Logout pressed');
   };
 
-  const renderRow = (label: string) => (
-    <TouchableOpacity style={styles.row}>
-      <Text style={styles.rowText}>{label}</Text>
-      <Icon name="chevron-forward" size={20} color="#333" />
-    </TouchableOpacity>
-  );
+  const renderRow = (label: string, p0: () => void) => {
+    const onPress = () => {
+      if (label === 'Manage address') {
+        navigation.navigate('ManageAddressScreen');
+      } else if (label === 'Manage Payment Methods') {
+        navigation.navigate('ManagePaymentMethodsScreen'); // example
+      } else if (label === 'About Buildio') {
+        navigation.navigate('AboutUsScreen');
+        // example
+      } else if (label === 'Notifications') {
+        navigation.navigate('NotificationsScreen');
+        // example
+      }
+      else if (label === 'Privacy & Security') {
+        navigation.navigate('PrivacySecurity');
+        // example
+      }
+       else if (label === 'Reset Password') {
+        navigation.navigate('ResetPassword');
+        // example
+      }
+      // handle others similarly...
+    };
+
+    return (
+      <TouchableOpacity style={styles.row} onPress={onPress}>
+        <Text style={styles.rowText}>{label}</Text>
+        <Icon name="chevron-forward" size={20} color="#333" />
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <><TopBar /><ScrollView><View style={styles.container}>
-
-      {/* Header */}
-      {/* <View style={styles.header}>
-        <TouchableOpacity onPress={handleBackPress}>
-          <Icon name="arrow-back" size={24} color="#1A1A1A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>User Details</Text>
-        <View style={{ width: 24 }} /> 
-      </View> */}
-
-      {/* Main Content */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-        {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageWrapper}>
-            <Image
-              source={{ uri: profileData.profilePhoto }}
-              style={styles.profileImage} />
-            <TouchableOpacity style={styles.editIcon} onPress={handleEditPress}>
-              <Icon name="pencil" size={16} color="#fff" />
-            </TouchableOpacity>
+  <>
+    <TopBar />
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.profileSection}>
+            <View style={styles.profileImageWrapper}>
+              <Image
+                source={{ uri: profileData.profilePhoto }}
+                style={styles.profileImage}
+              />
+              <TouchableOpacity style={styles.editIcon} onPress={handleEditPress}>
+                <Icon name="pencil" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.profileName}>{profileData.name}</Text>
           </View>
-          <Text style={styles.profileName}>{profileData.name}</Text>
-        </View>
 
-        {/* List Rows */}
-        {renderRow('Manage address')}
-        {renderRow('Manage payment method')}
-        {renderRow('Notifications')}
-        {renderRow('Privacy & Security')}
-        {renderRow('About Buildio')}
+          {renderRow('Manage address', () => navigation.navigate('ManageAddressScreen'))}
+          {renderRow('Manage Payment Methods', () =>
+            navigation.navigate('ManagePaymentMethodsScreen')
+          )}
+          {renderRow('Notifications', () => navigation.navigate('NotificationsScreen'))}
+          {renderRow('Privacy & Security', () => navigation.navigate('PrivacySecurity'))}
+          {renderRow('About Buildio', () => navigation.navigate('AboutUsScreen'))}
+          {renderRow('Reset Password', () => navigation.navigate('ResetPassword'))}
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Icon name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View></ScrollView><BottomTabBar /></>
-
-  );
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Icon name="log-out-outline" size={20} color="#fff" />
+            <Text style={styles.logoutText}>Log out</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+    <BottomTabBar />
+  </>
+);
 };
 
 const styles = StyleSheet.create({
@@ -147,9 +174,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderColor: '#E0E0E0',
+    paddingHorizontal: 16,
   },
   rowText: {
     fontSize: 16,
@@ -170,6 +198,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  safeArea: {
+  flex: 1,
+  backgroundColor: '#fff',
+},
+flex: {
+  flex: 1,
+},
+contentContainer: {
+  paddingHorizontal: 16,
+  paddingBottom: 120, // extra space to avoid being hidden by BottomTabBar
+  paddingTop: 24,
+},
 });
 
 export default AccountScreen;

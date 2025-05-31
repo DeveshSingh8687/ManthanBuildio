@@ -10,15 +10,79 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { RootStackParamList } from '../navigation/Navigation';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import fireStore from '@react-native-firebase/firestore';
+import uuid from 'react-native-uuid';
 
 export default function SignUpScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+  });
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const handleChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+const registerUser = async () => {
+  const { firstName, lastName, email, password } = formData;
+
+  const nameRegex = /^[A-Za-z]{2,}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+
+  if (!firstName || !lastName || !email || !password) {
+    Alert.alert('Validation Error', 'Please fill all fields');
+    return;
+  }
+
+  if (!nameRegex.test(firstName)) {
+    Alert.alert('Validation Error', 'First name must be at least 2 letters with no numbers or symbols.');
+    return;
+  }
+
+  if (!nameRegex.test(lastName)) {
+    Alert.alert('Validation Error', 'Last name must be at least 2 letters with no numbers or symbols.');
+    return;
+  }
+
+  if (!emailRegex.test(email)) {
+    Alert.alert('Validation Error', 'Please enter a valid email address.');
+    return;
+  }
+
+  if (!passwordRegex.test(password)) {
+    Alert.alert(
+      'Validation Error',
+      'Password must be at least 6 characters long and contain at least one letter and one number.'
+    );
+    return;
+  }
+
+  const userId = uuid.v4() as string;
+  try {
+    await fireStore().collection('users').doc(userId).set({
+      firstName,
+      lastName,
+      email,
+      password,
+      createdAt: fireStore.FieldValue.serverTimestamp(),
+    });
+    console.log('User added!');
+    navigation.navigate('Login');
+  } catch (error) {
+    console.error('Error adding user: ', error);
+    Alert.alert('Error', 'Failed to register user. Try again later.');
+  }
+};
 
   return (
     <KeyboardAvoidingView
@@ -27,23 +91,35 @@ export default function SignUpScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
-          <TouchableOpacity style={styles.backButton} onPress={() => {navigation.goBack()}}>
-          <Icon name="arrow-back" size={28} color="#333" />
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
+            <Icon name="arrow-back" size={28} color="#333" />
           </TouchableOpacity>
 
           <Text style={styles.title}>Sign up</Text>
 
-          <TextInput style={styles.input} placeholder="First name" placeholderTextColor="#999" />
-          <TextInput style={styles.input} placeholder="Last name" placeholderTextColor="#999" />
+          <TextInput
+            style={styles.input}
+            placeholder="First name"
+            placeholderTextColor="#999"
+            value={formData.firstName}
+            onChangeText={(text) => handleChange('firstName', text)}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Last name"
+            placeholderTextColor="#999"
+            value={formData.lastName}
+            onChangeText={(text) => handleChange('lastName', text)}
+          />
           <TextInput
             style={styles.input}
             placeholder="Enter Your Email"
             placeholderTextColor="#999"
             keyboardType="email-address"
+            autoCapitalize="none"
+            value={formData.email}
+            onChangeText={(text) => handleChange('email', text)}
           />
 
           <View style={styles.passwordContainer}>
@@ -52,20 +128,24 @@ export default function SignUpScreen() {
               placeholder="Password"
               placeholderTextColor="#999"
               secureTextEntry={!passwordVisible}
+              value={formData.password}
+              onChangeText={(text) => handleChange('password', text)}
             />
-            <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+            <TouchableOpacity onPress={() => setPasswordVisible((prev) => !prev)}>
               <Icon name={passwordVisible ? 'visibility' : 'visibility-off'} size={20} color="#999" />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.loginButton}>
+          <TouchableOpacity style={styles.loginButton} onPress={registerUser}>
             <Text style={styles.loginButtonText}>SignUp</Text>
           </TouchableOpacity>
 
-          <View style={styles.checkboxContainer}>
-            {/* You can add a proper checkbox here if needed */}
-            <Text style={styles.checkboxLabel}>Remember me</Text>
-          </View>
+          <View style={styles.signUpContainer}>
+                    <Text style={{color: '#999'}}>Create New Account? </Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                      <Text style={styles.signUpText}>Login</Text>
+                    </TouchableOpacity>
+                  </View>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -79,7 +159,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   backButton: {
-    marginBottom:40,
+    marginBottom: 40,
     marginTop: 20,
   },
   title: {
@@ -88,6 +168,15 @@ const styles = StyleSheet.create({
     color: '#1E1E1E',
     marginBottom: 30,
     paddingHorizontal: 15,
+  },
+  signUpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+    signUpText: {
+    fontWeight: 'bold',
+    color: '#6264A7',
   },
   input: {
     height: 50,

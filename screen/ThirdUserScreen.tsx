@@ -116,6 +116,7 @@ const UserScreen = () => {
           {/* Apply Button */}
 
       </ScrollView>
+      <BottomTabBar/>
     </>
   );
 };

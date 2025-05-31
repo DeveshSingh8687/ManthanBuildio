@@ -1,16 +1,15 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
+  Keyboard,
+  Image,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
-  TouchableWithoutFeedback,
-  Image,
-  Modal,
 } from 'react-native';
 import {Icon} from 'react-native-elements';
 import {
@@ -20,78 +19,51 @@ import {
 } from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import CustomJobSelector from './components/MultiSelectDropDown';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
-
-// const NavPopup = ({visible, onClose}: any) => {
-//   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
-//   return (
-//     <Modal
-//       transparent
-//       animationType="slide"
-//       visible={visible}
-//       onRequestClose={onClose}>
-//       <TouchableOpacity
-//         style={styles.modalOverlay}
-//         activeOpacity={1}
-//         onPress={onClose}>
-//         <View style={styles.navContainer}>
-//           {/* User Profile Section */}
-//           {/* <View style={styles.profileSection}>
-//             <Image
-//               source={{ uri: 'https://i.pravatar.cc/150?img=3' }}
-//               style={styles.profileImage}
-//             />
-//             <Text style={styles.profileName}>John Smith</Text>
-//             <Text style={styles.profileSubText}>Software Developer</Text>
-//           </View> */}
-
-//           {/* Menu Options */}
-//           <TouchableOpacity
-//             style={styles.navItemMenu}
-//             onPress={() => navigation.navigate('AccountScreen')}>
-//             <Icon
-//               name="account-circle"
-//               type="material"
-//               size={24}
-//               // color="#000"
-//             />{' '}
-//             <Text style={styles.navText}>Profile</Text>
-//           </TouchableOpacity>
-
-//           <TouchableOpacity
-//             style={styles.navItemMenu}
-//             onPress={() => navigation.navigate('JobsSection')}>
-//             <Icon
-//               name="assignment"
-//               type="material"
-//               size={24}
-//               // color="#FF0000"
-//             />{' '}
-//             <Text style={styles.navText}>Jobs</Text>
-//           </TouchableOpacity>
-//           <TouchableOpacity style={styles.navItemMenu}>
-//             <Icon name="logout" type="material" size={24} color="#FF3B30" />
-//             <Text style={[styles.navText, {color: '#FF3B30'}]}>Logout</Text>
-//           </TouchableOpacity>
-//         </View>
-//       </TouchableOpacity>
-//     </Modal>
-//   );
-// };
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import {PermissionsAndroid} from 'react-native';
 
 const AddJobScreen = () => {
-  const [jobTypeOpen, setJobTypeOpen] = useState(false);
-  const [jobTypeValue, setJobTypeValue] = useState(null);
-  const [jobTypeItems, setJobTypeItems] = useState([
-    {label: 'Full-time', value: 'full_time'},
-    {label: 'Part-time', value: 'part_time'},
-    {label: 'Internship', value: 'internship'},
-    {label: 'Freelance', value: 'freelance'},
-  ]);
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const handleCamera = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'This app needs camera access to take pictures.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+    }
+
+    launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
+      if (response.didCancel || response.errorCode) return;
+      if (response.assets && response.assets.length > 0) {
+        setSelectedImage(response.assets[0].uri ?? null);
+      }
+    });
+  };
+
+  const handleGallery = () => {
+    launchImageLibrary({mediaType: 'photo'}, response => {
+      if (response.didCancel || response.errorCode) return;
+      if (response.assets && response.assets.length > 0) {
+        setSelectedImage(response.assets[0].uri ?? null);
+      }
+    });
+  };
+
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const fields = [
@@ -99,110 +71,159 @@ const AddJobScreen = () => {
     'Email',
     'Phone Number',
     'Job Type',
-    'About',
-    'Experince',
+    'Description',
+    'Experience',
   ];
 
   const isMultiline = (label: string) =>
-    label === 'Description' || label === 'Requirements';
-  const [modalVisible, setModalVisible] = React.useState(false);
+    label === 'Description' || label === 'Experience';
+
+  const handleInputChange = (label: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [label]: value,
+    }));
+  };
+
+  useEffect(() => {
+    const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardVisible(true),
+    );
+    const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false),
+    );
+
+    return () => {
+      keyboardDidShow.remove();
+      keyboardDidHide.remove();
+    };
+  }, []);
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+
+    if (!formData['Description'])
+      errors['Description'] = 'Description is required.';
+    if (!formData['Name']) errors['Name'] = 'Name is required.';
+    if (!formData['Experience'])
+      errors['Experience'] = 'Experience is required.';
+    if (!formData['Email']) errors['Email'] = 'Email is required.';
+
+    setErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (!validateForm()) return;
+    // submit logic
+    console.log('Form submitted:', formData);
+  };
+
   useFocusEffect(
     useCallback(() => {
       setModalVisible(false);
-
-      // On focus, close the modal
     }, []),
   );
+
+  const removeImage = () => {
+    setSelectedImage(null);
+  };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* <View style={styles.headerLogo}>
-        <Image
-          source={require('../assets/asset_logo.png')}
-          style={styles.logo}
-        />
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => setModalVisible(true)}>
-          <Icon name="person-outline" size={24} />
-        </TouchableOpacity>
-      </View> */}
-              <TopBar/>
-
-      {/* <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} /> */}
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.flex}>
-          <KeyboardAwareScrollView
-            contentContainerStyle={styles.container}
-            extraScrollHeight={100}
-            enableOnAndroid
-            keyboardShouldPersistTaps="handled">
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.leftSection}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => {
-                    navigation.goBack();
-                  }}>
-                  <Icon name="arrow-back" size={22} color="#1A1A1A" />
-                </TouchableOpacity>
-                {/* <Text style={styles.cancelText}>Cancel</Text> */}
-              </View>
-
-              <Text style={styles.title}>Edit User</Text>
-
-              {/* <View style={styles.rightSection}>
-                <TouchableOpacity>
-                  <Text style={styles.nextButton}>Next</Text>
-                </TouchableOpacity>
-              </View> */}
-            </View>
-
-            {/* Input Fields */}
-            {fields.map((label, index) => {
-              const multiline = isMultiline(label);
-              return (
-                <View key={index} style={styles.inputCard}>
-                  <View style={styles.inputHeader}>
-                    <Text style={styles.label}>{label}</Text>
-                    <TouchableOpacity>
-                      <Icon name="edit" size={18} color="#6264A7" />
-                    </TouchableOpacity>
-                  </View>
-                  {(label === 'Description' || label === 'Requirements') && (
-                    <View style={styles.separator} />
-                  )}{' '}
-                  {/* Separator */}
-                  <TextInput
-                    style={[styles.input, multiline && styles.textArea]}
-                    placeholder="type..."
-                    placeholderTextColor="#888"
-                    multiline={multiline}
-                    numberOfLines={multiline ? 4 : 1}
-                    textAlignVertical={multiline ? 'top' : 'center'}
-                  />
-                </View>
-              );
-            })}
-            <CustomJobSelector />
-            {/* Image Upload Section */}
-            <View style={styles.inputCard}>
-              <Text style={styles.label}>Add image</Text>
-              <View style={styles.imageRow}>
-                {['camera-alt', 'photo-library'].map((icon, idx) => (
-                  <TouchableOpacity key={idx} style={styles.imageButton}>
-                    <Icon name={icon} size={22} color="white" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </KeyboardAwareScrollView>
+    <>
+      <TopBar />
+      <View style={styles.header}>
+        <View style={styles.leftSection}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={24} color="#6264A7" />
+          </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
-      <BottomTabBar />
-    </KeyboardAvoidingView>
+        <Text style={styles.title}>My Profile</Text>
+      </View>
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          {fields.map((label, index) => {
+            const multiline = isMultiline(label);
+            return (
+              <View key={index} style={styles.inputCard}>
+                <View style={styles.inputHeader}>
+                  <Text style={styles.label}>{label}</Text>
+                  <TouchableOpacity>
+                    <Icon name="edit" size={18} color="#6264A7" />
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    multiline && styles.textArea,
+                    errors[label] && styles.inputError, // <-- error border if error exists
+                  ]}
+                  placeholder={`Enter ${label.toLowerCase()}...`}
+                  placeholderTextColor="#888"
+                  multiline={multiline}
+                  numberOfLines={multiline ? 4 : 1}
+                  textAlignVertical={multiline ? 'top' : 'center'}
+                  onChangeText={text => handleInputChange(label, text)}
+                  value={formData[label] || ''}
+                />
+                {errors[label] && (
+                  <Text style={styles.errorText}>{errors[label]}</Text>
+                )}
+              </View>
+            );
+          })}
+
+          <CustomJobSelector />
+
+          <View style={styles.inputCard}>
+            <Text style={styles.label}>Add image</Text>
+            <View style={styles.imageRow}>
+              <TouchableOpacity
+                onPress={handleCamera}
+                style={styles.imageButton}
+              >
+                <Icon name="camera-alt" size={22} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleGallery}
+                style={styles.imageButton}
+              >
+                <Icon name="photo-library" size={22} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedImage && (
+              <Image
+                source={{uri: selectedImage}}
+                style={{
+                  width: '100%',
+                  height: 200,
+                  marginTop: 10,
+                  borderRadius: 10,
+                }}
+                resizeMode="cover"
+              />
+            )}
+          </View>
+
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            <Text style={styles.submitText}>Update Profile</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {!keyboardVisible && <BottomTabBar />}
+    </>
   );
 };
 
@@ -219,18 +240,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingTop: 24,
-    marginTop: 0,
     paddingHorizontal: 16,
     backgroundColor: '#fff',
-    marginBottom: 10,
   },
   leftSection: {
     alignItems: 'flex-start',
+    backgroundColor: '#fff',
   },
-  // rightSection: {
-  //   justifyContent: 'flex-end',
-  //   alignItems: 'flex-end',
-  // },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -240,16 +256,6 @@ const styles = StyleSheet.create({
     transform: [{translateX: -45}],
     top: 24,
   },
-  // nextButton: {
-  //   fontSize: 12,
-  //   color: '#6264A7',
-  //   marginTop: 40,
-  // },
-  // cancelText: {
-  //   fontSize: 12,
-  //   color: '#6264A7',
-  //   marginTop: 10,
-  // },
   inputCard: {
     marginHorizontal: 16,
     marginBottom: 12,
@@ -284,66 +290,39 @@ const styles = StyleSheet.create({
   imageRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: 10,
   },
   imageButton: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#6264A7',
     padding: 12,
     borderRadius: 8,
+    marginRight: 10,
+  },
+  submitButton: {
+    backgroundColor: '#6264A7',
+    marginHorizontal: 16,
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   backButton: {
     padding: 4,
   },
-  separator: {
-    height: 1,
-    backgroundColor: '#ccc',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  // headerLogo: {
-  //   flexDirection: 'row',
-  //   justifyContent: 'space-between',
-  //   alignItems: 'center',
-  //   paddingHorizontal: 10,
-  //   paddingVertical: 8,
-  //   backgroundColor: '#fff',
-  // },
-  // logo: {
-  //   width: 100,
-  //   height: 100,
-  //   resizeMode: 'contain',
-  // },
-  // profileButton: {
-  //   marginRight: 10,
-  //   padding: 10,
-  //   borderRadius: 8,
-  // },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  navContainer: {
-    width: 250,
-    backgroundColor: 'white',
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-    marginTop: 50,
-    marginRight: 10,
-    elevation: 5,
-  },
-  navText: {
-    marginLeft: 10,
+  submitText: {
+    color: 'white',
     fontSize: 16,
-    color: '#3F51B5',
+    fontWeight: 'bold',
   },
-  navItemMenu: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
+  errorText: {
+    color: 'red',
+    marginTop: 4,
+    fontSize: 12,
+  },
+  inputError: {
+    borderColor: 'red',
+    borderWidth: 1,
+    borderRadius: 8,
   },
 });
 

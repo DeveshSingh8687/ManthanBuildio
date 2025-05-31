@@ -150,7 +150,7 @@ export default function PostFeed({
   {showBackButton && (
             <View style={styles.headerContainer}>
               <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Icon name="arrow-back" size={28} color="#333" />
+                <Icon name="arrow-back" size={24} color="#6264A7" />
               </TouchableOpacity>
               <Text style={styles.heading}>{heading}</Text>
             </View>

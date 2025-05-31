@@ -1,0 +1,374 @@
+import React, {useEffect, useState, useCallback, useRef} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
+  Alert,
+  NativeSyntheticEvent,
+  KeyboardEvent,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useRoute} from '@react-navigation/native';
+import fireStore from '@react-native-firebase/firestore';
+import TopBar from './components/TopBar';
+
+type Message = {
+  id: string;
+  sendBy: string;
+  sendTo: string;
+  message: string;
+  createdAt: any;
+  status: string;
+  attachment?: {
+    name: string;
+    size: string;
+  };
+  time?: string;
+};
+
+const ChatScreen = () => {
+  const route = useRoute();
+  const {myChatId, data} = route.params as {
+    myChatId: string;
+    data: {id: string; firstName: string; lastName: string};
+  };
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(60);
+
+  const flatListRef = useRef<FlatList>(null);
+
+  const chatIdA = `${data.id}${myChatId}`;
+  const chatIdB = `${myChatId}${data.id}`;
+
+  // Scroll to bottom helper
+  const scrollToBottom = useCallback(() => {
+    if (flatListRef.current && messages.length > 0) {
+      flatListRef.current.scrollToEnd({animated: true});
+    }
+  }, [messages.length]);
+
+  useEffect(() => {
+    // Subscribe to keyboard events
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const keyboardWillShowSub = Keyboard.addListener(showEvent, (e: any) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      scrollToBottom();
+    });
+    const keyboardWillHideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardWillShowSub.remove();
+      keyboardWillHideSub.remove();
+    };
+  }, [scrollToBottom]);
+
+  useEffect(() => {
+    // Firestore real-time listener for messages from chatIdA (only)
+    const unsubscribe = fireStore()
+      .collection('chats')
+      .doc(chatIdA)
+      .collection('messages')
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(snapshot => {
+     const fetchedMessages = snapshot.docs
+  .map(doc => ({
+    id: doc.id,
+    ...(doc.data() as Omit<Message, 'id'>),
+  }))
+  .filter(msg => msg.createdAt) // only include messages with timestamps
+.sort((a, b) => {
+  const parseTime = (timeStr: string) => {
+    const date = new Date("1970-01-01 " + timeStr);
+    return date.getTime();
+  };
+
+  return parseTime(a.createdAt || "") - parseTime(b.createdAt || "");
+});
+       setMessages(fetchedMessages);
+      //  setTimeout(() => {
+      //    scrollToBottom();
+      //  }, 100);
+      });
+
+    return unsubscribe;
+  }, [chatIdA, scrollToBottom]);
+
+  const sendMessage = () => {
+    const trimmed = inputText.trim();
+    if (!trimmed) return;
+
+    const newMessage = {
+      sendBy: myChatId,
+      sendTo: data.id,
+      message: trimmed,
+     createdAt: new Date(),
+      status: 'read',
+    };
+
+    setInputText('');
+
+    const batch = fireStore().batch();
+
+    const refA = fireStore()
+      .collection('chats')
+      .doc(chatIdA)
+      .collection('messages')
+      .doc();
+    const refB = fireStore()
+      .collection('chats')
+      .doc(chatIdB)
+      .collection('messages')
+      .doc();
+
+    batch.set(refA, newMessage);
+    batch.set(refB, newMessage);
+
+    batch.commit();
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    Alert.alert(
+      'Delete Message',
+      'Are you sure you want to delete this message?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const refA = fireStore()
+                .collection('chats')
+                .doc(chatIdA)
+                .collection('messages')
+                .doc(messageId);
+
+              const refB = fireStore()
+                .collection('chats')
+                .doc(chatIdB)
+                .collection('messages')
+                .doc(messageId);
+
+              const batch = fireStore().batch();
+              batch.delete(refA);
+              batch.delete(refB);
+              await batch.commit();
+            } catch (error) {
+              console.error('Error deleting message:', error);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const renderMessage = useCallback(
+    ({item}: {item: Message}) => {
+      const isSent = item.sendBy === myChatId;
+
+      if (item.attachment) {
+        return (
+          <View
+            style={[
+              styles.messageContainer,
+              isSent ? styles.sent : styles.received,
+              {flexDirection: 'row', alignItems: 'center'},
+            ]}>
+            <Icon name="file-pdf-box" size={30} color="#fff" />
+            <View style={{marginLeft: 10}}>
+              <Text style={styles.attachmentName}>{item.attachment.name}</Text>
+              <Text style={styles.attachmentSize}>{item.attachment.size}</Text>
+            </View>
+            <Icon
+              name="dots-vertical"
+              size={20}
+              color="#fff"
+              style={{marginLeft: 'auto'}}
+            />
+            <Text style={styles.time}>{item.time}</Text>
+          </View>
+        );
+      }
+
+      const MessageWrapper = isSent ? TouchableOpacity : View;
+
+      return (
+        <MessageWrapper
+          onLongPress={() => isSent && handleDeleteMessage(item.id)}
+          delayLongPress={300}
+          style={[
+            styles.messageContainer,
+            isSent ? styles.sent : styles.received,
+          ]}>
+          <Text style={[styles.messageText, isSent && {color: '#fff'}]}>
+            {item.message}
+          </Text>
+          <Text style={styles.time}>
+            {item.time}{' '}
+            {isSent && item.status === 'read' && (
+              <Icon name="check-all" size={14} color="#4caf50" />
+            )}
+          </Text>
+        </MessageWrapper>
+      );
+    },
+    [myChatId],
+  );
+return (
+  <>
+    <TopBar />
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <Image
+              source={{ uri: 'https://randomuser.me/api/portraits/women/1.jpg' }}
+              style={styles.avatar}
+            />
+            <View>
+              <Text style={styles.name}>{`${data.firstName} ${data.lastName}`}</Text>
+              <Text style={styles.status}>● Online</Text>
+            </View>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={item => item.id}
+              renderItem={renderMessage}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{
+                paddingVertical: 10,
+                paddingHorizontal: 15,
+                flexGrow: 1, // <== Important for empty chats to scroll
+              }}
+              onContentSizeChange={scrollToBottom}
+              onLayout={scrollToBottom}
+              keyboardShouldPersistTaps="handled"
+            />
+          </View>
+
+          <View style={[styles.inputContainer, { marginBottom: keyboardHeight }]}>
+            <TextInput
+              style={styles.input}
+              placeholder="Write your message"
+              value={inputText}
+              onChangeText={setInputText}
+              onSubmitEditing={sendMessage}
+              returnKeyType="send"
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+              <Icon name="send" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  </>
+);
+
+};
+
+export default ChatScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9f9fb',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#fff',
+    elevation: 3,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 10,
+  },
+  name: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  status: {
+    color: '#4caf50',
+    fontSize: 12,
+  },
+  messageContainer: {
+    marginVertical: 5,
+    maxWidth: '80%',
+    borderRadius: 15,
+    padding: 10,
+  },
+  sent: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#6264A7',
+  },
+  received: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eeeeee',
+  },
+  messageText: {
+    color: '#333',
+  },
+  time: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 5,
+    alignSelf: 'flex-end',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    padding: 10,
+    paddingBottom:   40,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
+    height: 45,
+    borderRadius: 25,
+    backgroundColor: '#f1f1f1',
+    paddingHorizontal: 15,
+    marginRight: 10,
+  },
+  sendButton: {
+    width: 45,
+    height: 45,
+    backgroundColor: '#6264A7',
+    borderRadius: 22.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentName: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  attachmentSize: {
+    color: '#fff',
+    fontSize: 12,
+  },
+});

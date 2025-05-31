@@ -89,32 +89,32 @@ const NavPopup = ({visible, onClose}: any) => {
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  const jobPosts = [
-    {
-      id: 1,
-      user: 'Sadie Shelton',
-      date: 'Jan 05, 2024',
-      text: 'Just finished this challenging but rewarding renovation project. Loved the transformation!',
-      image: 'https://picsum.photos/id/1/200/300',
-      avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-    },
-    {
-      id: 2,
-      user: 'Sadie Shelton',
-      date: 'Jan 05, 2024',
-      text: 'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-      image: 'https://loremflicker.com',
-      avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-    },
-    {
-      id: 3,
-      user: 'Sadie Shelton',
-      date: 'Jan 05, 2024',
-      text: 'Hiring experienced carpenters and roofers for upcoming projects. Contact us for more info!',
-      image: 'https://picsum.photos/200/300.jpg',
-      avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-    },
-  ];
+  // const jobPosts = [
+  //   {
+  //     id: 1,
+  //     user: 'Sadie Shelton',
+  //     date: 'Jan 05, 2024',
+  //     text: 'Just finished this challenging but rewarding renovation project. Loved the transformation!',
+  //     image: 'https://picsum.photos/id/1/200/300',
+  //     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
+  //   },
+  //   {
+  //     id: 2,
+  //     user: 'Sadie Shelton',
+  //     date: 'Jan 05, 2024',
+  //     text: 'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
+  //     image: 'https://loremflicker.com',
+  //     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
+  //   },
+  //   {
+  //     id: 3,
+  //     user: 'Sadie Shelton',
+  //     date: 'Jan 05, 2024',
+  //     text: 'Hiring experienced carpenters and roofers for upcoming projects. Contact us for more info!',
+  //     image: 'https://picsum.photos/200/300.jpg',
+  //     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
+  //   },
+  // ];
   const handlePress = () => {
     // Navigate to PostJob screen
     navigation.navigate('JobDetailS');
@@ -197,7 +197,7 @@ const HomeScreen = () => {
       renderItem={renderPost}
       scrollEnabled={false}
     /> */}
-        <NewsFeed showBackButton={false} showHeading={false} />
+        <NewsFeed showBackButton={false} showHeading={false} limit={3} />
         {/* <View style={styles.jobItem}>
         <View>
           <Text style={styles.jobTitle}>Electrician</Text>

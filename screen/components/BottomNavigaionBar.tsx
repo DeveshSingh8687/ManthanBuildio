@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
@@ -7,31 +7,69 @@ import { RootStackParamList } from '../../navigation/Navigation';
 
 const BottomTabBar = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const [activeTab, setActiveTab] = useState<string>('Home');
 
   return (
     <View style={[styles.bottomNav, { paddingBottom: insets.bottom || 40 }]}>
-      <TouchableOpacity style={styles.navItem}>
-        <Icon name="home-outline" size={24} color="#6264A7" />
-        <Text style={styles.navLabel}>Home</Text>
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => {
+          setActiveTab('Home');
+          navigation.navigate('HomeScreen');
+        }}>
+        <Icon
+          name="home-outline"
+          size={24}
+          color={activeTab === 'Home' ? '#6264A7' : '#888'}
+        />
+        <Text style={[styles.navLabel, activeTab === 'Home' && { color: '#6264A7' }]}>Home</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem}>
-        <Icon name="pricetags-outline" size={24} color="#555" />
-        <Text style={styles.navLabel}>Booking</Text>
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => setActiveTab('Booking')}>
+        <Icon
+          name="pricetags-outline"
+          size={24}
+          color={activeTab === 'Booking' ? '#6264A7' : '#555'}
+        />
+        <Text style={[styles.navLabel, activeTab === 'Booking' && { color: '#6264A7' }]}>Booking</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          setActiveTab('Add');
+          navigation.navigate('AddPostScreen');
+        }}>
         <Icon name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem}>
-        <Icon name="chatbubble-outline" size={24} color="#555" />
-        <Text style={styles.navLabel}>Chat</Text>
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => {
+          setActiveTab('Chat');
+          navigation.navigate('ChatListScreen');
+        }}>
+        <Icon
+          name="chatbubble-outline"
+          size={24}
+          color={activeTab === 'Chat' ? '#6264A7' : '#555'}
+        />
+        <Text style={[styles.navLabel, activeTab === 'Chat' && { color: '#6264A7' }]}>Chat</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItem}>
-        <Icon name="notifications-outline" size={24} color="#888" />
-        <Text style={styles.navLabel}>Notify</Text>
+      <TouchableOpacity
+        style={styles.navItem}
+        onPress={() => setActiveTab('Notify')}>
+        <Icon
+          name="notifications-outline"
+          size={24}
+          color={activeTab === 'Notify' ? '#6264A7' : '#888'}
+        />
+        <Text style={[styles.navLabel, activeTab === 'Notify' && { color: '#6264A7' }]}>Notify</Text>
       </TouchableOpacity>
     </View>
   );

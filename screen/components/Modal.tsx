@@ -56,6 +56,16 @@ export const NavPopup = ({visible, onClose}: any) => {
             <Text style={styles.navText}>Jobs</Text>
           </TouchableOpacity>
 
+             <TouchableOpacity
+            style={styles.navItemMenu}
+            onPress={() => {
+              onClose();
+              navigation.navigate('MyProfile');
+            }}>
+            <Icon name="person" type="material" size={24} />
+            <Text style={styles.navText}>My Profile</Text>
+          </TouchableOpacity>
+
           {/* Logout Option */}
           <TouchableOpacity style={styles.navItemMenu} onPress={handleLogout}>
             <Icon name="logout" type="material" size={24} color="#6264A7" />

@@ -9,6 +9,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/Navigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height } = Dimensions.get('window');
 
@@ -27,10 +28,17 @@ export default function LaunchScreen() {
       }).start(() => {
         navigation.replace('Welcome'); // or navigate()
       });
+      checkLogin();
     }, 4000);
 
     return () => clearTimeout(timer);
   }, []);
+  const checkLogin = async () => {
+    const userId = await AsyncStorage.getItem('USERID');
+    if (userId) {
+      navigation.replace('HomeScreen');
+    }
+  };
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
