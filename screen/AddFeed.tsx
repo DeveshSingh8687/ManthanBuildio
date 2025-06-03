@@ -129,7 +129,7 @@ const AddPostScreen = () => {
         <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContainer}
           enableOnAndroid={true}
-          extraScrollHeight={Platform.OS === 'ios' ? 100 : 120}
+          extraScrollHeight={Platform.OS === 'ios' ? 100 : 60}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.container}>
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: 'rgba(255, 0, 0, 0.8)',
+    backgroundColor: '#6264A7',
     borderRadius: 12,
     padding: 2,
   },

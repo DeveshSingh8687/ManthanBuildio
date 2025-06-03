@@ -11,16 +11,19 @@ import {
   useNavigation,
 } from '@react-navigation/native';
 import {RootStackParamList} from '../../navigation/Navigation';
+import { logout } from '../config/auth';
 
 export const NavPopup = ({visible, onClose}: any) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  const handleLogout = () => {
-    // TODO: Add your logout logic here (clear tokens, etc.)
-    onClose(); // Close modal
-    // navigation.navigate('LoginScreen'); // Redirect to login screen
-  };
 
+const handleLogout = async () => {
+  const success = await logout();
+  console.log('logout')
+  if (success) {
+    navigation.navigate('Login');
+  }
+};
   return (
     <Modal
       transparent

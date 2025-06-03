@@ -22,6 +22,7 @@ import {
   getAuth,
   signInWithCredential,
   FacebookAuthProvider,
+  onAuthStateChanged
 } from '@react-native-firebase/auth';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
@@ -35,10 +36,19 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+   const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState<import('@react-native-firebase/auth').FirebaseAuthTypes.User | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-
+  function handleAuthStateChanged(user: import('@react-native-firebase/auth').FirebaseAuthTypes.User | null) {
+    setUser(user);
+    if (initializing) setInitializing(false);
+  }
+    useEffect(() => {
+    const subscriber = onAuthStateChanged(getAuth(), handleAuthStateChanged);
+    return subscriber; // unsubscribe on unmount
+  }, []);
 const handleLogin = () => {
   if (!email || !password) {
     Alert.alert('Error', 'Please enter both email and password');
@@ -50,7 +60,7 @@ const handleLogin = () => {
     .where('email', '==', email)
     .get()
     .then(res => {
-      console.log('res', res);
+      console.log('re', res);
       if (!res.empty) {
         const userData = res.docs[0].data();
         const userPassword = userData.password;
@@ -74,7 +84,6 @@ const handleLogin = () => {
     });
 };
 
-
   const goToNext = async (name: any, email: any, userId: string) => {
     await AsyncStorage.setItem('USERID', userId);
     await AsyncStorage.setItem('NAME', name);
@@ -83,7 +92,7 @@ const handleLogin = () => {
   };
 
   async function onGoogleButtonPress() {
-    _signInWithGoogle();
+    _signInWithGoogle(navigation);
 
   }
 
@@ -111,16 +120,19 @@ const handleLogin = () => {
     }
 
     // Create a Firebase credential with the AccessToken
-    const facebookCredential = auth.FacebookAuthProvider.credential(
+    const facebookCredential = FacebookAuthProvider.credential(
       data.accessToken,
     );
-    await auth().signInWithCredential(facebookCredential);
+    await getAuth().signInWithCredential(facebookCredential);
     console.log('Facebook credential:', facebookCredential);
 
     // Sign-in the user with the credential
     return signInWithCredential(getAuth(), facebookCredential);
   }
-  return (
+
+
+ 
+  return (  
     <KeyboardAvoidingView
       style={{flex: 1}}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -46,7 +46,7 @@ const AddJobScreen = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [image, setImage] = useState<string | null>(null); // To store selected image
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageUris, setImageUris] = useState<string[]>([]);
 
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const handleImageUpload = () => {
@@ -64,53 +64,33 @@ const AddJobScreen = () => {
   };
 
   const handleCamera = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'This app needs camera access to take pictures.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        },
-      );
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+    const result = await launchCamera({mediaType: 'photo'});
+    if (
+      !result.didCancel &&
+      result.assets &&
+      result.assets[0] &&
+      result.assets[0].uri
+    ) {
+      setImageUris(prev => [...prev, result.assets![0].uri!]);
     }
-
-    launchCamera(
-      {mediaType: 'photo', saveToPhotos: true, quality: 0.5},
-      response => {
-        if (response.didCancel || response.errorCode) return;
-        if (response.assets && response.assets.length > 0) {
-          setImageUri(response.assets[0].uri ?? null);
-        }
-      },
-    );
   };
 
-  // Gallery handler
-  const handleLaunchGallery = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        quality: 0.5,
-      },
-      response => {
-        if (response.didCancel) return;
-        if (response.errorCode) {
-          console.log('Gallery error:', response.errorMessage);
-        } else if (response.assets && response.assets.length > 0) {
-          setImageUri(response.assets[0].uri || null);
-        }
-      },
-    );
+  const handleLaunchGallery = async () => {
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 0,
+    });
+    if (!result.didCancel && result.assets) {
+      const uris = result.assets
+        .map(asset => asset.uri)
+        .filter((uri): uri is string => typeof uri === 'string');
+      setImageUris(prev => [...prev, ...uris]);
+    }
   };
 
-  const removeImage = () => {
-    setImageUri(null);
+  const removeImage = (uriToRemove: string) => {
+    setImageUris(prev => prev.filter(uri => uri !== uriToRemove));
   };
-
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData['Description'])
@@ -177,7 +157,7 @@ const AddJobScreen = () => {
       <TopBar />
       <KeyboardAwareScrollView
         contentContainerStyle={{flexGrow: 1}}
-        extraScrollHeight={100}
+        extraScrollHeight={60}
         keyboardShouldPersistTaps="handled"
         enableOnAndroid
         showsVerticalScrollIndicator={false}>
@@ -258,22 +238,26 @@ const AddJobScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {imageUri && (
+              {imageUris.length > 0 && (
                 <View style={{marginTop: 10}}>
-                  <Image
-                    source={{uri: imageUri}}
-                    style={{
-                      width: '100%',
-                      height: 200,
-                      borderRadius: 10,
-                    }}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    onPress={removeImage}
-                    style={styles.removeButton}>
-                    <Icon name="close" size={18} color="white" />
-                  </TouchableOpacity>
+                  {imageUris.map((uri, index) => (
+                    <View key={index} style={{marginBottom: 10}}>
+                      <Image
+                        source={{uri}}
+                        style={{
+                          width: '100%',
+                          height: 200,
+                          borderRadius: 10,
+                        }}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        onPress={() => removeImage(uri)}
+                        style={styles.removeButton}>
+                        <Icon name="close" size={18} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
                 </View>
               )}
             </View>

@@ -12,15 +12,16 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
-  NativeSyntheticEvent,
-  KeyboardEvent,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useRoute} from '@react-navigation/native';
 import fireStore from '@react-native-firebase/firestore';
 import TopBar from './components/TopBar';
+import storage from '@react-native-firebase/storage';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
 type Message = {
+  image: any;
   id: string;
   sendBy: string;
   sendTo: string;
@@ -32,6 +33,7 @@ type Message = {
     size: string;
   };
   time?: string;
+  imageUrl?: string;
 };
 
 const ChatScreen = () => {
@@ -43,14 +45,13 @@ const ChatScreen = () => {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [keyboardHeight, setKeyboardHeight] = useState(60);
+  const [keyboardHeight, setKeyboardHeight] = useState(20);
 
   const flatListRef = useRef<FlatList>(null);
 
   const chatIdA = `${data.id}${myChatId}`;
   const chatIdB = `${myChatId}${data.id}`;
 
-  // Scroll to bottom helper
   const scrollToBottom = useCallback(() => {
     if (flatListRef.current && messages.length > 0) {
       flatListRef.current.scrollToEnd({animated: true});
@@ -58,14 +59,16 @@ const ChatScreen = () => {
   }, [messages.length]);
 
   useEffect(() => {
-    // Subscribe to keyboard events
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const keyboardWillShowSub = Keyboard.addListener(showEvent, (e: any) => {
       setKeyboardHeight(e.endCoordinates.height);
       scrollToBottom();
     });
+
     const keyboardWillHideSub = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
     });
@@ -77,35 +80,70 @@ const ChatScreen = () => {
   }, [scrollToBottom]);
 
   useEffect(() => {
-    // Firestore real-time listener for messages from chatIdA (only)
     const unsubscribe = fireStore()
       .collection('chats')
       .doc(chatIdA)
       .collection('messages')
       .orderBy('createdAt', 'asc')
       .onSnapshot(snapshot => {
-     const fetchedMessages = snapshot.docs
-  .map(doc => ({
-    id: doc.id,
-    ...(doc.data() as Omit<Message, 'id'>),
-  }))
-  .filter(msg => msg.createdAt) // only include messages with timestamps
-.sort((a, b) => {
-  const parseTime = (timeStr: string) => {
-    const date = new Date("1970-01-01 " + timeStr);
-    return date.getTime();
-  };
+        const fetchedMessages = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Message, 'id'>),
+          }))
+          .filter(msg => msg.createdAt)
+          .sort((a, b) => {
+            const parseTime = (timeStr: string) => {
+              const date = new Date('1970-01-01 ' + timeStr);
+              return date.getTime();
+            };
+            return parseTime(a.createdAt || '') - parseTime(b.createdAt || '');
+          });
 
-  return parseTime(a.createdAt || "") - parseTime(b.createdAt || "");
-});
-       setMessages(fetchedMessages);
-      //  setTimeout(() => {
-      //    scrollToBottom();
-      //  }, 100);
+        setMessages(fetchedMessages);
       });
 
     return unsubscribe;
   }, [chatIdA, scrollToBottom]);
+  const sendImage = async () => {
+    const result = await launchImageLibrary({mediaType: 'photo', quality: 0.7});
+    if (result.didCancel || !result.assets?.length) return;
+
+    const image = result.assets[0];
+    const {uri, fileName} = image;
+
+    if (!uri || !fileName) return;
+
+    const reference = storage().ref(`/chatImages/${Date.now()}_${fileName}`);
+    await reference.putFile(uri);
+    const downloadURL = await reference.getDownloadURL();
+
+    const newMessage = {
+      sendBy: myChatId,
+      sendTo: data.id,
+      message: '',
+      createdAt: new Date(),
+      status: 'read',
+      imageUrl: downloadURL,
+    };
+
+    const batch = fireStore().batch();
+    const refA = fireStore()
+      .collection('chats')
+      .doc(chatIdA)
+      .collection('messages')
+      .doc();
+    const refB = fireStore()
+      .collection('chats')
+      .doc(chatIdB)
+      .collection('messages')
+      .doc();
+
+    batch.set(refA, newMessage);
+    batch.set(refB, newMessage);
+
+    await batch.commit();
+  };
 
   const sendMessage = () => {
     const trimmed = inputText.trim();
@@ -115,7 +153,7 @@ const ChatScreen = () => {
       sendBy: myChatId,
       sendTo: data.id,
       message: trimmed,
-     createdAt: new Date(),
+      createdAt: new Date(),
       status: 'read',
     };
 
@@ -139,7 +177,39 @@ const ChatScreen = () => {
 
     batch.commit();
   };
+  const handleCamera = () => {
+    launchCamera({mediaType: 'photo', quality: 0.8}, response => {
+      if (response.didCancel || response.errorCode) return;
 
+      const asset = response.assets?.[0];
+      if (!asset?.uri) return;
+
+      const imageMessage = {
+        sendBy: myChatId,
+        sendTo: data.id,
+        message: '',
+        image: asset.uri,
+        createdAt: new Date(),
+        status: 'read',
+      };
+
+      const batch = fireStore().batch();
+      const refA = fireStore()
+        .collection('chats')
+        .doc(chatIdA)
+        .collection('messages')
+        .doc();
+      const refB = fireStore()
+        .collection('chats')
+        .doc(chatIdB)
+        .collection('messages')
+        .doc();
+
+      batch.set(refA, imageMessage);
+      batch.set(refB, imageMessage);
+      batch.commit();
+    });
+  };
   const handleDeleteMessage = (messageId: string) => {
     Alert.alert(
       'Delete Message',
@@ -156,7 +226,6 @@ const ChatScreen = () => {
                 .doc(chatIdA)
                 .collection('messages')
                 .doc(messageId);
-
               const refB = fireStore()
                 .collection('chats')
                 .doc(chatIdB)
@@ -179,7 +248,9 @@ const ChatScreen = () => {
   const renderMessage = useCallback(
     ({item}: {item: Message}) => {
       const isSent = item.sendBy === myChatId;
+      const MessageWrapper = isSent ? TouchableOpacity : View;
 
+      // 📄 Attachment Message
       if (item.attachment) {
         return (
           <View
@@ -204,8 +275,36 @@ const ChatScreen = () => {
         );
       }
 
-      const MessageWrapper = isSent ? TouchableOpacity : View;
+      // 🖼️ Image Message
+      if (item.image) {
+  return (
+    <View
+      style={[
+        styles.messageContainer,
+        isSent ? styles.sent : styles.received,
+      ]}>
+      <Image
+        source={{uri: item.image}}
+        style={{width: 200, height: 200, borderRadius: 10, marginBottom: item.message ? 5 : 0}}
+        resizeMode="cover"
+      />
+      {item.message ? (
+        <Text style={[styles.messageText, isSent && {color: '#fff'}]}>
+          {item.message}
+        </Text>
+      ) : null}
+      <Text style={styles.time}>
+        {item.time}{' '}
+        {isSent && item.status === 'read' && (
+          <Icon name="check-all" size={14} color="#4caf50" />
+        )}
+      </Text>
+    </View>
+  );
+}
+  
 
+      // 📝 Text Message
       return (
         <MessageWrapper
           onLongPress={() => isSent && handleDeleteMessage(item.id)}
@@ -228,65 +327,77 @@ const ChatScreen = () => {
     },
     [myChatId],
   );
-return (
-  <>
-    <TopBar />
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1 }}>
-          <View style={styles.header}>
-            <Image
-              source={{ uri: 'https://randomuser.me/api/portraits/women/1.jpg' }}
-              style={styles.avatar}
-            />
-            <View>
-              <Text style={styles.name}>{`${data.firstName} ${data.lastName}`}</Text>
-              <Text style={styles.status}>● Online</Text>
+
+  return (
+    <>
+      <TopBar />
+      <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={{flex: 1}}>
+            <View style={styles.header}>
+              <Image
+                source={{
+                  uri: 'https://randomuser.me/api/portraits/women/1.jpg',
+                }}
+                style={styles.avatar}
+              />
+              <View>
+                <Text
+                  style={
+                    styles.name
+                  }>{`${data.firstName} ${data.lastName}`}</Text>
+                <Text style={styles.status}>● Online</Text>
+              </View>
+            </View>
+
+            <View style={{flex: 1}}>
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                keyExtractor={item => item.id}
+                renderItem={renderMessage}
+                showsVerticalScrollIndicator
+                contentContainerStyle={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 15,
+                  flexGrow: 1,
+                }}
+                onContentSizeChange={scrollToBottom}
+                onLayout={scrollToBottom}
+                keyboardShouldPersistTaps="handled"
+              />
+            </View>
+            {/* Input */}
+            <View style={styles.inputContainer}>
+              <TouchableOpacity
+                onPress={handleCamera}
+                style={{marginRight: 10}}>
+                <Icon name="camera" size={24} color="#6264A7" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={sendImage} style={{marginRight: 10}}>
+                <Icon name="image" size={26} color="#6264A7" />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                placeholder="Write your message"
+                value={inputText}
+                onChangeText={setInputText}
+                onSubmitEditing={sendMessage}
+                returnKeyType="send"
+                blurOnSubmit={false}
+              />
+              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                <Icon name="send" size={24} color="#fff" />
+              </TouchableOpacity>
             </View>
           </View>
-
-          <View style={{ flex: 1 }}>
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              keyExtractor={item => item.id}
-              renderItem={renderMessage}
-              showsVerticalScrollIndicator={true}
-              contentContainerStyle={{
-                paddingVertical: 10,
-                paddingHorizontal: 15,
-                flexGrow: 1, // <== Important for empty chats to scroll
-              }}
-              onContentSizeChange={scrollToBottom}
-              onLayout={scrollToBottom}
-              keyboardShouldPersistTaps="handled"
-            />
-          </View>
-
-          <View style={[styles.inputContainer, { marginBottom: keyboardHeight }]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Write your message"
-              value={inputText}
-              onChangeText={setInputText}
-              onSubmitEditing={sendMessage}
-              returnKeyType="send"
-              blurOnSubmit={false}
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Icon name="send" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  </>
-);
-
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </>
+  );
 };
 
 export default ChatScreen;
@@ -343,17 +454,18 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 10,
-    paddingBottom:   40,
+    paddingBottom: 45,
     backgroundColor: '#fff',
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    height: 45,
-    borderRadius: 25,
-    backgroundColor: '#f1f1f1',
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 20,
     paddingHorizontal: 15,
-    marginRight: 10,
+    backgroundColor: '#f5f5f5',
   },
   sendButton: {
     width: 45,
