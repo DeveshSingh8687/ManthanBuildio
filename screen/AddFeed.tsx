@@ -32,7 +32,7 @@ const AddPostScreen = () => {
     description?: string;
   }>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [imageUri, setImageUri] = useState<string | null>(null);
+const [imageUris, setImageUris] = useState<string[]>([]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
@@ -75,53 +75,62 @@ const AddPostScreen = () => {
       setPostTitle('');
       setDescription('');
       setErrors({});
-      setImageUri(null);
+      setImageUris([] );
     }
   };
 
   const handleCamera = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'This app needs camera access to take pictures.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        },
-      );
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
-    }
-
-    launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
-      if (response.didCancel || response.errorCode) return;
-      if (response.assets && response.assets.length > 0) {
-        setImageUri(response.assets[0].uri ?? null);
-      }
-    });
-  };
-
-  const handleLaunchGallery = () => {
-    launchImageLibrary(
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
       {
-        mediaType: 'photo',
-      },
-      response => {
-        if (response.didCancel) return;
-        if (response.errorCode) {
-          console.log('Gallery error:', response.errorMessage);
-        } else if (response.assets && response.assets.length > 0) {
-          setImageUri(response.assets[0].uri || null);
-        }
+        title: 'Camera Permission',
+        message: 'This app needs camera access to take pictures.',
+        buttonNeutral: 'Ask Me Later',
+        buttonNegative: 'Cancel',
+        buttonPositive: 'OK',
       },
     );
-  };
+    if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+  }
 
-  const removeImage = () => {
-    setImageUri(null);
-  };
+  launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
+    if (response.didCancel || response.errorCode) return;
 
+    if (response.assets && response.assets.length > 0) {
+      const newUris = response.assets
+        .map(asset => asset.uri)
+        .filter(uri => uri !== undefined) as string[];
+
+      setImageUris(prevUris => [...prevUris, ...newUris]);
+    }
+  });
+};
+
+
+const handleLaunchGallery = () => {
+  launchImageLibrary(
+    {
+      mediaType: 'photo',
+      selectionLimit: 0, // 🔥 Allows multiple image selection
+    },
+    response => {
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        console.log('Gallery error:', response.errorMessage);
+      } else if (response.assets && response.assets.length > 0) {
+        const selectedUris = response.assets
+          .map(asset => asset.uri)
+          .filter(uri => uri !== undefined) as string[];
+
+        setImageUris(prevUris => [...prevUris, ...selectedUris]);
+      }
+    },
+  );
+};
+const removeImage = (indexToRemove: number) => {
+  setImageUris(prevUris => prevUris.filter((_, index) => index !== indexToRemove));
+};
   return (
     <>
       <TopBar />
@@ -192,16 +201,26 @@ const AddPostScreen = () => {
             </View>
 
             {/* Image Preview */}
-            {imageUri && (
-              <View style={styles.imagePreviewContainer}>
-                <Image source={{uri: imageUri}} style={styles.imagePreview} />
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={removeImage}>
-                  <Icon name="close" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            )}
+     {imageUris.length > 0 && (
+  <View style={styles.imagePreviewContainer}>
+    {imageUris.map((uri, index) => (
+      <View key={index} style={styles.imageWrapper}>
+        <Image source={{uri}} style={styles.imagePreview} />
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => {
+            const newUris = [...imageUris];
+            newUris.splice(index, 1);
+            setImageUris(newUris);
+          }}>
+          <Icon name="close" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
+    ))}
+  </View>
+)}
+
+
 
             {/* Icons */}
             <View style={styles.footerIconsInline}>
@@ -327,18 +346,17 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   imagePreviewContainer: {
-    position: 'relative',
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-        paddingHorizontal: 10,
-    paddingVertical: 10,
+    flexDirection: 'column',
+    flexWrap: 'wrap',
+    marginVertical: 10,
+    justifyContent: 'flex-start',
 
   },
-  imagePreview: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 10,
+   imagePreview: {
+    width: 200, // Roughly 4 per row with margin
+    height: 200,
+    margin: 5,
+    borderRadius: 8,
   },
   removeButton: {
     position: 'absolute',
@@ -353,12 +371,18 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
+    marginBottom: 45,
   },
   postButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
   },
+  imageWrapper: {
+  position: 'relative',
+  marginRight: 10,
+  marginBottom: 10,
+},
 });
 
 export default AddPostScreen;

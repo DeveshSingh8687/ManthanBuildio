@@ -7,12 +7,13 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import TopBar from '../components/TopBar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import BottomTabBar from '../components/BottomNavigaionBar';
-
+import {GooglePlacesAutocomplete} from 'react-native-google-places-autocomplete';
 
 // Import Geolocation from community package
 import Geolocation from '@react-native-community/geolocation';
@@ -30,21 +31,40 @@ const ManageAddressScreen: React.FC<Props> = ({navigation}) => {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   const handleUseCurrentLocation = () => {
+    setLoadingLocation(true);
+
     Geolocation.getCurrentPosition(
       position => {
         const {latitude, longitude} = position.coords;
         setLocation({latitude, longitude});
-        Alert.alert(
-          'Location fetched',
-          `Latitude: ${latitude}\nLongitude: ${longitude}`,
-        );
+        setLoadingLocation(false);
       },
       error => {
-        Alert.alert('Error', error.message);
+        // Handle location permission denied or location off
+        if (error.code === 1) {
+          // Permission denied
+          Alert.alert(
+            'Permission Denied',
+            'Please enable location permissions in your device settings.',
+          );
+        } else if (error.code === 2) {
+          // Location unavailable (e.g. GPS off)
+          Alert.alert(
+            'Location Unavailable',
+            'Please turn on your device location services.',
+          );
+        } else if (error.code === 3) {
+          // Timeout
+          Alert.alert('Timeout', 'Unable to get location. Please try again.');
+        } else {
+          Alert.alert('Error', error.message);
+        }
+        setLoadingLocation(false);
       },
-      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+      {enableHighAccuracy: false, timeout: 15000, maximumAge: 10000},
     );
   };
 
@@ -62,6 +82,7 @@ const ManageAddressScreen: React.FC<Props> = ({navigation}) => {
   return (
     <>
       <TopBar />
+
       <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -94,6 +115,25 @@ const ManageAddressScreen: React.FC<Props> = ({navigation}) => {
                 style={styles.modalCloseIcon}
               />
             </TouchableOpacity>
+            {loadingLocation && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(255, 255, 255, 0.7)', // semi-transparent background
+                  zIndex: 1000,
+                }}>
+                <ActivityIndicator size="large" color="#6264A7" />
+                <Text style={{color: '#6264A7', marginTop: 10, fontSize: 16}}>
+                  Fetching location...
+                </Text>
+              </View>
+            )}
 
             {/* Search bar placeholder */}
             <View style={styles.searchBar}>

@@ -360,7 +360,7 @@ contentContainerStyle={styles.list}
 </TouchableOpacity>
 </View> */}
       </ScrollView>
-      <View style={{height: 100}} />
+      <View style={{height: 100, backgroundColor: '#fff'}} />
       <BottomTabBar />
     </>
   );

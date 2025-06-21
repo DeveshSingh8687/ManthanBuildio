@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,32 +9,44 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { RootStackParamList } from '../navigation/Navigation';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import {RootStackParamList} from '../navigation/Navigation';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
 import TopBar from './components/TopBar';
 import fireStore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomTabBar from './components/BottomNavigaionBar';
+import 'firebase/auth';
+import 'firebase/firestore';
+type Message = {
+  id: string;
+  text?: string;
+  createdAt?: any;
+  senderId?: string;
+  // Add other fields as needed based on your Firestore message schema
+};
 
 const ChatListScreen = () => {
-    const [chatId, setChatId] = useState('');
+  const [chatId, setChatId] = useState('');
+
+
+
 
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-    const [users, setUsers] = React.useState<any[]>([]);
+  const [users, setUsers] = React.useState<any[]>([]);
   useEffect(() => {
     getUsers();
   }, []);
-   const getUsers = async () => {
-    const storedChatId = await AsyncStorage.getItem('USERID') || '';
+  const getUsers = async () => {
+    const storedChatId = (await AsyncStorage.getItem('USERID')) || '';
     setChatId(storedChatId); // ✅ use state instead of global variable
+    console.log('chatId', storedChatId);
 
     const myEmail = await AsyncStorage.getItem('EMAIL');
-    console.log('looged in as ',myEmail)
 
     try {
-
       const res = await fireStore().collection('users').get();
+      // Removed: const authUsers = await firebase.auth().listUsers();
 
       // Filter out current user email
       const filteredUsers = res.docs
@@ -46,12 +58,11 @@ const ChatListScreen = () => {
         .filter(user => user.email !== myEmail && user.email !== '');
 
       setUsers(filteredUsers);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
   // Subscribe to chats where current user is a participant
 
-    console.log(chatId, 'user id');
+  console.log(users, 'ususers');
 
   // Random avatar fallback
   const getRandomAvatar = (index: number) => {
@@ -59,25 +70,53 @@ const ChatListScreen = () => {
     const imgNum = (index % 99) + 1;
     return `https://randomuser.me/api/portraits/${gender}/${imgNum}.jpg`;
   };
+    const [messages, setMessages] = useState<Message[]>([]);
+  
+  const chatIdA = chatId || 'defaultChatId'; // Fallback to a default chat ID if not set
+   useEffect(() => {
+    const unsubscribe = fireStore()
+      .collection('chats')
+      .doc(chatIdA)
+      .collection('messages')
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(snapshot => {
+        const fetchedMessages = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Message, 'id'>),
+          }))
+          
+        console.log('Fetched messages :', fetchedMessages);
+        setMessages(fetchedMessages);
+        // 👇 This will ensure scrolling works when new messages arrive
 
-  const renderItem = ({ item, index }: { item: any; index: number }) => (
+      });
+
+    return unsubscribe;
+  }, [chatIdA]);
+  console.log(messages)
+  const renderItem = ({item, index}: {item: any; index: number}) => (
     <TouchableOpacity
       style={styles.chatItem}
       onPress={() =>
         navigation.navigate('ChatDetailScreen', {
-      myChatId: chatId,
-      data: item
+          myChatId: chatId,
+          data: item,
         })
-      }
-    >
-  <Image
-      source={{
-        uri: item.avatarUrl || getRandomAvatar(index),
-      }}
-      style={styles.avatar}
-    />      <View style={styles.chatInfo}>
+      }>
+      <Image
+        source={{
+          uri: item.avatarUrl || getRandomAvatar(index),
+        }}
+        style={styles.avatar}
+      />{' '}
+      <View style={styles.chatInfo}>
         <View style={styles.chatHeader}>
-<Text style={styles.chatName}>{`${item.firstName} ${item.lastName}`}</Text>
+          <Text style={styles.chatName}>
+            {item.firstName && item.lastName
+              ? `${item.firstName} ${item.lastName}`
+              : item.name}
+          </Text>{' '}
           <Text style={styles.chatTime}>{item.lastMessageTime}</Text>
         </View>
         <View style={styles.chatFooter}>
@@ -103,7 +142,12 @@ const ChatListScreen = () => {
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#aaa" style={styles.searchIcon} />
+          <Icon
+            name="search"
+            size={20}
+            color="#aaa"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
@@ -117,7 +161,11 @@ const ChatListScreen = () => {
           data={users}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20 }}>No chats found</Text>}
+          ListEmptyComponent={
+            <Text style={{textAlign: 'center', marginTop: 20}}>
+              No chats found
+            </Text>
+          }
         />
       </View>
       <BottomTabBar />

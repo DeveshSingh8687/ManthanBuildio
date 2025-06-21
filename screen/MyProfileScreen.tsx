@@ -105,7 +105,7 @@ export default function MyProfile({heading = 'Job Posts'}: {heading?: string}) {
         contentContainerStyle={styles.list}
       />
       <>
-        <View style={{height: 100}} />
+        <View style={{height: 100, backgroundColor:'#fff'}} />
         <BottomTabBar />
       </>
     </View>
@@ -200,33 +200,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 12,
   },
-  viewMoreButton: {
-    backgroundColor: '#f2f2f2',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
-    alignItems: 'center',
-  },
-  viewMoreButtonText: {
-    color: '#6264A7',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  applyButton: {
-    backgroundColor: '#6264A7',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
+ 
+  
+ 
   backButton: {
     padding: 8,
     borderRadius: 8,

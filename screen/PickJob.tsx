@@ -171,7 +171,7 @@ export default function PostFeed({
 
       {(showBottomBar || showLikeAndShareButton) && (
         <>
-          <View style={{height: 100}} />
+        <View style={{height: 100, backgroundColor:'#fff'}} />
           <BottomTabBar />
         </>
       )}

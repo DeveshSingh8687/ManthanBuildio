@@ -17,6 +17,9 @@ import { RootStackParamList } from '../navigation/Navigation';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import fireStore from '@react-native-firebase/firestore';
 import uuid from 'react-native-uuid';
+import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { _signInWithGoogle, onFacebookButtonPress } from './config/auth';
+
 
 export default function SignUpScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -31,6 +34,10 @@ export default function SignUpScreen() {
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+    async function onGoogleButtonPress() {
+      _signInWithGoogle(navigation);
+    }
+
 
 const registerUser = async () => {
   const { firstName, lastName, email, password } = formData;
@@ -146,6 +153,28 @@ const registerUser = async () => {
                       <Text style={styles.signUpText}>Login</Text>
                     </TouchableOpacity>
                   </View>
+                    <TouchableOpacity
+                              style={styles.socialButton}
+                              onPress={onGoogleButtonPress}>
+                              <FontAwesome
+                                name="google"
+                                size={20}
+                                color="#EA4335"
+                                style={styles.socialIcon}
+                              />
+                              <Text style={styles.socialText}>Sign up with Google</Text>
+                            </TouchableOpacity>
+                                  <TouchableOpacity
+                                        style={styles.socialButton}
+                                        onPress={() => onFacebookButtonPress(navigation)}>
+                                        <FontAwesome
+                                          name="facebook"
+                                          size={20}
+                                          color="#3b5998"
+                                          style={styles.socialIcon}
+                                        />
+                                        <Text style={styles.socialText}>Sign up with Facebook</Text>
+                                      </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -224,5 +253,23 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     color: '#555',
+  },
+    socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 25,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+   socialIcon: {
+    marginRight: 12,
+  },
+    socialText: {
+    fontSize: 16,
+    color: '#333',
   },
 });

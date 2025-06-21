@@ -40,7 +40,7 @@ const ChatScreen = () => {
   const route = useRoute();
   const {myChatId, data} = route.params as {
     myChatId: string;
-    data: {id: string; firstName: string; lastName: string};
+    data: {id: string; firstName: string; lastName: string; name: string};
   };
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -106,43 +106,37 @@ const ChatScreen = () => {
     return unsubscribe;
   }, [chatIdA, scrollToBottom]);
   const sendImage = async () => {
-    const result = await launchImageLibrary({mediaType: 'photo', quality: 0.7});
-    if (result.didCancel || !result.assets?.length) return;
+    launchImageLibrary({mediaType: 'photo', quality: 0.8}, response => {
+      if (response.didCancel || response.errorCode) return;
 
-    const image = result.assets[0];
-    const {uri, fileName} = image;
+      const asset = response.assets?.[0];
+      if (!asset?.uri) return;
 
-    if (!uri || !fileName) return;
+      const imageMessage = {
+        sendBy: myChatId,
+        sendTo: data.id,
+        message: '',
+        image: asset.uri,
+        createdAt: new Date(),
+        status: 'read',
+      };
 
-    const reference = storage().ref(`/chatImages/${Date.now()}_${fileName}`);
-    await reference.putFile(uri);
-    const downloadURL = await reference.getDownloadURL();
+      const batch = fireStore().batch();
+      const refA = fireStore()
+        .collection('chats')
+        .doc(chatIdA)
+        .collection('messages')
+        .doc();
+      const refB = fireStore()
+        .collection('chats')
+        .doc(chatIdB)
+        .collection('messages')
+        .doc();
 
-    const newMessage = {
-      sendBy: myChatId,
-      sendTo: data.id,
-      message: '',
-      createdAt: new Date(),
-      status: 'read',
-      imageUrl: downloadURL,
-    };
-
-    const batch = fireStore().batch();
-    const refA = fireStore()
-      .collection('chats')
-      .doc(chatIdA)
-      .collection('messages')
-      .doc();
-    const refB = fireStore()
-      .collection('chats')
-      .doc(chatIdB)
-      .collection('messages')
-      .doc();
-
-    batch.set(refA, newMessage);
-    batch.set(refB, newMessage);
-
-    await batch.commit();
+      batch.set(refA, imageMessage);
+      batch.set(refB, imageMessage);
+      batch.commit();
+    });
   };
 
   const sendMessage = () => {
@@ -249,7 +243,6 @@ const ChatScreen = () => {
     ({item}: {item: Message}) => {
       const isSent = item.sendBy === myChatId;
       const MessageWrapper = isSent ? TouchableOpacity : View;
-
       // 📄 Attachment Message
       if (item.attachment) {
         return (
@@ -277,35 +270,43 @@ const ChatScreen = () => {
 
       // 🖼️ Image Message
       if (item.image) {
-  return (
-    <View
-      style={[
-        styles.messageContainer,
-        isSent ? styles.sent : styles.received,
-      ]}>
-      <Image
-        source={{uri: item.image}}
-        style={{width: 200, height: 200, borderRadius: 10, marginBottom: item.message ? 5 : 0}}
-        resizeMode="cover"
-      />
-      {item.message ? (
-        <Text style={[styles.messageText, isSent && {color: '#fff'}]}>
-          {item.message}
-        </Text>
-      ) : null}
-      <Text style={styles.time}>
-        {item.time}{' '}
-        {isSent && item.status === 'read' && (
-          <Icon name="check-all" size={14} color="#4caf50" />
-        )}
-      </Text>
-    </View>
-  );
-}
-  
+        return (
+          <TouchableOpacity>
+             <View
+            style={[
+              styles.messageContainer,
+              isSent ? styles.sent : styles.received,
+            ]}>
+            <Image
+              source={{uri: item.image}}
+              style={{
+                width: 200,
+                height: 200,
+                borderRadius: 10,
+                marginBottom: item.message ? 5 : 0,
+              }}
+              resizeMode="cover"
+            />
+            {item.message ? (
+              <Text style={[styles.messageText, isSent && {color: '#fff'}]}>
+                {item.message}
+              </Text>
+            ) : null}
+            <Text style={styles.time}>
+              {item.time}{' '}
+              {isSent && item.status === 'read' && (
+                <Icon name="check-all" size={14} color="#4caf50" />
+              )}
+            </Text>
+          </View>
+          </TouchableOpacity>
+         
+        );
+      }
 
       // 📝 Text Message
       return (
+        
         <MessageWrapper
           onLongPress={() => isSent && handleDeleteMessage(item.id)}
           delayLongPress={300}
@@ -344,11 +345,13 @@ const ChatScreen = () => {
                 }}
                 style={styles.avatar}
               />
+              
               <View>
-                <Text
-                  style={
-                    styles.name
-                  }>{`${data.firstName} ${data.lastName}`}</Text>
+                <Text style={styles.name}>
+                  {data.firstName && data.lastName
+                    ? `${data.firstName} ${data.lastName}`
+                    : data.name}
+                </Text>
                 <Text style={styles.status}>● Online</Text>
               </View>
             </View>

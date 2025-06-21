@@ -15,74 +15,74 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import {NavigationHelpersContext, NavigationProp, useNavigation} from '@react-navigation/native';
+import {
+  NavigationProp,
+  useNavigation,
+} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import {
-  GoogleAuthProvider,
   getAuth,
   signInWithCredential,
   FacebookAuthProvider,
-  onAuthStateChanged
+  onAuthStateChanged,
 } from '@react-native-firebase/auth';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
 import {_signInWithGoogle} from './config/auth';
 import fireStore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useEffect} from 'react';
 
-
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-   const [initializing, setInitializing] = useState(true);
-  const [user, setUser] = useState<import('@react-native-firebase/auth').FirebaseAuthTypes.User | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState<
+    import('@react-native-firebase/auth').FirebaseAuthTypes.User | null
+  >(null);
   const [rememberMe, setRememberMe] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  function handleAuthStateChanged(user: import('@react-native-firebase/auth').FirebaseAuthTypes.User | null) {
+  function handleAuthStateChanged(
+    user: import('@react-native-firebase/auth').FirebaseAuthTypes.User | null,
+  ) {
     setUser(user);
     if (initializing) setInitializing(false);
   }
-    useEffect(() => {
+  useEffect(() => {
     const subscriber = onAuthStateChanged(getAuth(), handleAuthStateChanged);
     return subscriber; // unsubscribe on unmount
   }, []);
-const handleLogin = () => {
-  if (!email || !password) {
-    Alert.alert('Error', 'Please enter both email and password');
-    return;
-  }
+  const handleLogin = () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
 
-  fireStore()
-    .collection('users')
-    .where('email', '==', email)
-    .get()
-    .then(res => {
-      console.log('re', res);
-      if (!res.empty) {
-        const userData = res.docs[0].data();
-        const userPassword = userData.password;
+    fireStore()
+      .collection('users')
+      .where('email', '==', email)
+      .get()
+      .then(res => {
+        console.log('re', res);
+        if (!res.empty) {
+          const userData = res.docs[0].data();
+          const userPassword = userData.password;
 
-        if (userPassword === password) {
-          goToNext(
-            userData.firstName,
-            userData.email,
-            res.docs[0].id,
-          );
+          if (userPassword === password) {
+            goToNext(userData.firstName, userData.email, res.docs[0].id);
+          } else {
+            Alert.alert('Error', 'Incorrect password');
+          }
         } else {
-          Alert.alert('Error', 'Incorrect password');
+          Alert.alert('Error', 'User not found');
         }
-      } else {
-        Alert.alert('Error', 'User not found');
-      }
-    })
-    .catch(err => {
-      console.log('Error fetching user:', err);
-      Alert.alert('Error', 'Login failed. Please try again.');
-    });
-};
+      })
+      .catch(err => {
+        console.log('Error fetching user:', err);
+        Alert.alert('Error', 'Login failed. Please try again.');
+      });
+  };
 
   const goToNext = async (name: any, email: any, userId: string) => {
     await AsyncStorage.setItem('USERID', userId);
@@ -93,7 +93,6 @@ const handleLogin = () => {
 
   async function onGoogleButtonPress() {
     _signInWithGoogle(navigation);
-
   }
 
   async function onFacebookButtonPress() {
@@ -106,7 +105,7 @@ const handleLogin = () => {
     console.log('Login result:', result);
 
     if (result.isCancelled) {
-          // navigation.navigate('HomeScreen');
+      // navigation.navigate('HomeScreen');
 
       throw 'User cancelled the login process';
     }
@@ -130,9 +129,7 @@ const handleLogin = () => {
     return signInWithCredential(getAuth(), facebookCredential);
   }
 
-
- 
-  return (  
+  return (
     <KeyboardAvoidingView
       style={{flex: 1}}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -141,7 +138,6 @@ const handleLogin = () => {
         <ScrollView
           contentContainerStyle={styles.scrollContentContainer}
           keyboardShouldPersistTaps="handled">
-       
           {/* Back Arrow */}
           {/* <TouchableOpacity
             style={styles.backButton}

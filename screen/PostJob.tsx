@@ -155,14 +155,7 @@ const AddJobScreen = () => {
   return (
     <>
       <TopBar />
-      <KeyboardAwareScrollView
-        contentContainerStyle={{flexGrow: 1}}
-        extraScrollHeight={60}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid
-        showsVerticalScrollIndicator={false}>
-        <View style={{flex: 1}}>
-          <View style={styles.header}>
+         <View style={styles.header}>
             <View style={styles.leftSection}>
               <TouchableOpacity
                 style={styles.backButton}
@@ -172,6 +165,14 @@ const AddJobScreen = () => {
             </View>
             <Text style={styles.title}>Post a Job</Text>
           </View>
+      <KeyboardAwareScrollView
+        contentContainerStyle={{flexGrow: 1}}
+        extraScrollHeight={40}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        showsVerticalScrollIndicator={false}>
+        <View style={{flex: 1}}>
+    
 
           <View style={styles.container}>
             {fields.map((label, index) => {
