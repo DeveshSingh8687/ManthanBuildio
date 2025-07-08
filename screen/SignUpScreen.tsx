@@ -75,20 +75,50 @@ const registerUser = async () => {
   }
 
   const userId = uuid.v4() as string;
-  try {
-    await fireStore().collection('users').doc(userId).set({
-      firstName,
-      lastName,
-      email,
-      password,
-      createdAt: fireStore.FieldValue.serverTimestamp(),
+
+    try {
+    const response = await fetch('http://4.245.1.145:4000/api/auth/sign_up', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password: password,
+      }),
     });
-    console.log('User added!');
-    navigation.navigate('Login');
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('User signed up successfully:', data);
+      Alert.alert('Success', 'User signed up successfully!');
+      // Optionally navigate or save token
+    } else {
+      const errorData = await response.json();
+      console.error('Sign-up failed:', errorData);
+      Alert.alert('Sign Up Failed', errorData.message || 'Something went wrong');
+    }
   } catch (error) {
-    console.error('Error adding user: ', error);
-    Alert.alert('Error', 'Failed to register user. Try again later.');
+    console.error('Error:', error);
+    Alert.alert('Error', 'Network error or server not reachable');
   }
+  // try {
+  //   await fireStore().collection('users').doc(userId).set({
+  //     firstName,
+  //     lastName,
+  //     email,
+  //     password,
+  //     createdAt: fireStore.FieldValue.serverTimestamp(),
+  //   });
+  //   console.log('User added!');
+  //   navigation.navigate('Login');
+  // } catch (error) {
+  //   console.error('Error adding user: ', error);
+  //   Alert.alert('Error', 'Failed to register user. Try again later.');
+  // }
 };
 
   return (

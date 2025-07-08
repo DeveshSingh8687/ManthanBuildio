@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,15 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const profileData = {
   name: 'John Doe',
@@ -28,6 +31,67 @@ const profileData = {
 
 const AccountScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  type UserData = {
+    first_name: string;
+    last_name: string;
+    // add other fields as needed
+  };
+
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+
+      if (!token) {
+        Alert.alert('Error', 'No auth token found');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        'http://4.245.1.145:4000/api/users/my_profile',
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const contentType = response.headers.get('content-type');
+      const text = await response.text();
+
+      console.log('Status:', response.status);
+      console.log('Response:', text);
+
+      if (contentType && contentType.includes('application/json')) {
+        const json = JSON.parse(text);
+        if (response.ok) {
+          setUserData(json.data);
+        } else {
+          Alert.alert('Error', json.message || 'Failed to fetch user');
+        }
+      } else {
+        Alert.alert('Error', 'Unexpected response format');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      Alert.alert('Error', 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+  console.log(userData, 'user');
+
+  if (loading) return <ActivityIndicator style={{flex: 1}} size="large" />;
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -53,12 +117,10 @@ const AccountScreen = () => {
       } else if (label === 'Notifications') {
         navigation.navigate('NotificationsScreen');
         // example
-      }
-      else if (label === 'Privacy & Security') {
+      } else if (label === 'Privacy & Security') {
         navigation.navigate('PrivacySecurity');
         // example
-      }
-       else if (label === 'Reset Password') {
+      } else if (label === 'Reset Password') {
         navigation.navigate('ResetPassword');
         // example
       }
@@ -74,49 +136,63 @@ const AccountScreen = () => {
   };
 
   return (
-  <>
-    <TopBar />
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.profileSection}>
-            <View style={styles.profileImageWrapper}>
-              <Image
-                source={{ uri: profileData.profilePhoto }}
-                style={styles.profileImage}
-              />
-              <TouchableOpacity style={styles.editIcon} onPress={handleEditPress}>
-                <Icon name="pencil" size={16} color="#fff" />
-              </TouchableOpacity>
+    <>
+      <TopBar />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}>
+            <View style={styles.profileSection}>
+              <View style={styles.profileImageWrapper}>
+                <Image
+                  source={{uri: profileData.profilePhoto}}
+                  style={styles.profileImage}
+                />
+                <TouchableOpacity
+                  style={styles.editIcon}
+                  onPress={handleEditPress}>
+                  <Icon name="pencil" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.profileName}>
+                {userData?.first_name} {userData?.last_name}
+              </Text>
             </View>
-            <Text style={styles.profileName}>{profileData.name}</Text>
-          </View>
 
-          {renderRow('Manage address', () => navigation.navigate('ManageAddressScreen'))}
-          {renderRow('Manage Payment Methods', () =>
-            navigation.navigate('ManagePaymentMethodsScreen')
-          )}
-          {renderRow('Notifications', () => navigation.navigate('NotificationsScreen'))}
-          {renderRow('Privacy & Security', () => navigation.navigate('PrivacySecurity'))}
-          {renderRow('About Buildio', () => navigation.navigate('AboutUsScreen'))}
-          {renderRow('Reset Password', () => navigation.navigate('ResetPassword'))}
+            {renderRow('Manage address', () =>
+              navigation.navigate('ManageAddressScreen'),
+            )}
+            {renderRow('Manage Payment Methods', () =>
+              navigation.navigate('ManagePaymentMethodsScreen'),
+            )}
+            {renderRow('Notifications', () =>
+              navigation.navigate('NotificationsScreen'),
+            )}
+            {renderRow('Privacy & Security', () =>
+              navigation.navigate('PrivacySecurity'),
+            )}
+            {renderRow('About Buildio', () =>
+              navigation.navigate('AboutUsScreen'),
+            )}
+            {renderRow('Reset Password', () =>
+              navigation.navigate('ResetPassword'),
+            )}
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Icon name="log-out-outline" size={20} color="#fff" />
-            <Text style={styles.logoutText}>Log out</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-    <BottomTabBar />
-  </>
-);
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}>
+              <Icon name="log-out-outline" size={20} color="#fff" />
+              <Text style={styles.logoutText}>Log out</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+      <BottomTabBar />
+    </>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -199,17 +275,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   safeArea: {
-  flex: 1,
-  backgroundColor: '#fff',
-},
-flex: {
-  flex: 1,
-},
-contentContainer: {
-  paddingHorizontal: 16,
-  paddingBottom: 120, // extra space to avoid being hidden by BottomTabBar
-  paddingTop: 24,
-},
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  flex: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 120, // extra space to avoid being hidden by BottomTabBar
+    paddingTop: 24,
+  },
 });
 
 export default AccountScreen;

@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import auth from '@react-native-firebase/auth';
 import {
   View,
   Text,
@@ -70,7 +69,7 @@ export default function LoginScreen() {
           const userPassword = userData.password;
 
           if (userPassword === password) {
-            goToNext(userData.firstName, userData.email, res.docs[0].id);
+            goToNext(userData.firstName, userData.email, res.docs[0].id,userData.uid);
           } else {
             Alert.alert('Error', 'Incorrect password');
           }
@@ -84,11 +83,51 @@ export default function LoginScreen() {
       });
   };
 
-  const goToNext = async (name: any, email: any, userId: string) => {
+  const goToNext = async (name: any, email: any, userId: string, uid: any) => {
     await AsyncStorage.setItem('USERID', userId);
+    await AsyncStorage.setItem('UID', uid);
     await AsyncStorage.setItem('NAME', name);
     await AsyncStorage.setItem('EMAIL', email);
     navigation.navigate('HomeScreen');
+  };
+
+   const handleSignIn = async () => {
+    try {
+      const response = await fetch('http://4.245.1.145:4000/api/auth/sign_in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.data.token;
+        const firstName = data.data.user.first_name
+        const lastName = data.data.user.last_name
+
+        // Save token to AsyncStorage
+        await AsyncStorage.setItem('authToken', token);
+        await AsyncStorage.setItem('firstName', firstName);
+        await AsyncStorage.setItem('lastName', lastName);
+
+         navigation.navigate('HomeScreen');
+
+         console.log()
+      } else {
+        const errorData = await response.json();
+        console.error('Login failed:', errorData);
+        Alert.alert('Login Failed', errorData.message || 'Invalid credentials');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      // Alert.alert('Error', JSON.stringify(error));
+    }
   };
 
   async function onGoogleButtonPress() {
@@ -176,7 +215,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
           {/* Login Button */}
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+          <TouchableOpacity style={styles.loginButton} onPress={handleSignIn}>
             <Text style={styles.loginButtonText}>Login</Text>
           </TouchableOpacity>
           {/* Remember Me + Forgot Password */}

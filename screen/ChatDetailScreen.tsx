@@ -79,32 +79,32 @@ const ChatScreen = () => {
     };
   }, [scrollToBottom]);
 
-  useEffect(() => {
-    const unsubscribe = fireStore()
-      .collection('chats')
-      .doc(chatIdA)
-      .collection('messages')
-      .orderBy('createdAt', 'asc')
-      .onSnapshot(snapshot => {
-        const fetchedMessages = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...(doc.data() as Omit<Message, 'id'>),
-          }))
-          .filter(msg => msg.createdAt)
-          .sort((a, b) => {
-            const parseTime = (timeStr: string) => {
-              const date = new Date('1970-01-01 ' + timeStr);
-              return date.getTime();
-            };
-            return parseTime(a.createdAt || '') - parseTime(b.createdAt || '');
-          });
+  // useEffect(() => {
+  //   const unsubscribe = fireStore()
+  //     .collection('chats')
+  //     .doc(chatIdA)
+  //     .collection('messages')
+  //     .orderBy('createdAt', 'asc')
+  //     .onSnapshot(snapshot => {
+  //       const fetchedMessages = snapshot.docs
+  //         .map(doc => ({
+  //           id: doc.id,
+  //           ...(doc.data() as Omit<Message, 'id'>),
+  //         }))
+  //         .filter(msg => msg.createdAt)
+  //         .sort((a, b) => {
+  //           const parseTime = (timeStr: string) => {
+  //             const date = new Date('1970-01-01 ' + timeStr);
+  //             return date.getTime();
+  //           };
+  //           return parseTime(a.createdAt || '') - parseTime(b.createdAt || '');
+  //         });
 
-        setMessages(fetchedMessages);
-      });
+  //       setMessages(fetchedMessages);
+  //     });
 
-    return unsubscribe;
-  }, [chatIdA, scrollToBottom]);
+  //   return unsubscribe;
+  // }, [chatIdA, scrollToBottom]);
   const sendImage = async () => {
     launchImageLibrary({mediaType: 'photo', quality: 0.8}, response => {
       if (response.didCancel || response.errorCode) return;
@@ -138,39 +138,108 @@ const ChatScreen = () => {
       batch.commit();
     });
   };
+const generateChatId = (userId1: string, userId2: string): string => {
+  const sortedIds = [userId1, userId2].sort();
+  return `${sortedIds[0]}_${sortedIds[1]}`;
+};
 
-  const sendMessage = () => {
-    const trimmed = inputText.trim();
-    if (!trimmed) return;
+  // const sendMessage = () => {
+  //   const trimmed = inputText.trim();
+  //   if (!trimmed) return;
 
-    const newMessage = {
-      sendBy: myChatId,
-      sendTo: data.id,
-      message: trimmed,
-      createdAt: new Date(),
-      status: 'read',
-    };
+  //   const newMessage = {
+  //     sendBy: myChatId,
+  //     sendTo: data.id,
+  //     message: trimmed,
+  //     createdAt: new Date(),
+  //     status: 'read',
+  //   };
 
-    setInputText('');
+  //   setInputText('');
 
-    const batch = fireStore().batch();
+  //   const batch = fireStore().batch();
 
-    const refA = fireStore()
-      .collection('chats')
-      .doc(chatIdA)
-      .collection('messages')
-      .doc();
-    const refB = fireStore()
-      .collection('chats')
-      .doc(chatIdB)
-      .collection('messages')
-      .doc();
+  //   const refA = fireStore()
+  //     .collection('chats')
+  //     .doc(chatIdA)
+  //     .collection('messages')
+  //     .doc();
+  //   const refB = fireStore()
+  //     .collection('chats')
+  //     .doc(chatIdB)
+  //     .collection('messages')
+  //     .doc();
 
-    batch.set(refA, newMessage);
-    batch.set(refB, newMessage);
+  //   batch.set(refA, newMessage);
+  //   batch.set(refB, newMessage);
 
-    batch.commit();
+  //   batch.commit();
+  // };
+  
+useEffect(() => {
+  if (!myChatId || !data?.id) return;
+
+  const chatId = generateChatId(myChatId, data.id);
+  console.log('Chat ID:', myChatId,'data ID:', data.id, 'Generated Chat ID:', chatId);
+
+  const unsubscribe = fireStore()
+    .collection('chats')
+    .doc(chatId)
+    .collection('messages')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(snapshot => {
+      const fetchedMessages = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...(doc.data() as Omit<Message, 'id'>),
+        }))
+        .filter(msg => msg.createdAt instanceof Date || !!msg.createdAt); // safer filter
+
+      setMessages(fetchedMessages);
+
+      // Optional: If you want to scroll after new messages, handle that separately.
+      scrollToBottom?.(); // assuming scrollToBottom is a function
+    });
+
+  return unsubscribe;
+}, [myChatId, data?.id]);
+console.log('Messages:', messages);
+  const sendMessage = async () => {
+  const trimmed = inputText.trim();
+  if (!trimmed) return;
+
+  const chatId = generateChatId(myChatId, data.id);
+  const chatRef = fireStore().collection('chats').doc(chatId);
+
+  const newMessage = {
+    sendBy: myChatId,
+    sendTo: data.id,
+    message: trimmed,
+    createdAt: fireStore.FieldValue.serverTimestamp(),
+    status: 'sent', // Optional: you can use 'pending', 'delivered' etc.
   };
+
+  setInputText('');
+
+  const batch = fireStore().batch();
+
+  const messageRef = chatRef.collection('messages').doc();
+  batch.set(messageRef, newMessage);
+
+  // Also update chat metadata (e.g., last message preview in chats list)
+  batch.set(
+    chatRef,
+    {
+      members: [myChatId, data.id],
+      lastMessage: trimmed,
+      lastMessageTime: fireStore.FieldValue.serverTimestamp(),
+      createdAt: fireStore.FieldValue.serverTimestamp(), // Will only be used if creating the chat for the first time
+    },
+    { merge: true }
+  );
+
+  await batch.commit();
+};
   const handleCamera = () => {
     launchCamera({mediaType: 'photo', quality: 0.8}, response => {
       if (response.didCancel || response.errorCode) return;
@@ -242,6 +311,7 @@ const ChatScreen = () => {
   const renderMessage = useCallback(
     ({item}: {item: Message}) => {
       const isSent = item.sendBy === myChatId;
+      console.log('Rendering message:', item);
       const MessageWrapper = isSent ? TouchableOpacity : View;
       // 📄 Attachment Message
       if (item.attachment) {

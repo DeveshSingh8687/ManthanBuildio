@@ -19,11 +19,13 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 const AddPostScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
 
   const [postTitle, setPostTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -106,7 +108,28 @@ const [imageUris, setImageUris] = useState<string[]>([]);
     }
   });
 };
+  const [fullName, setFullName] = useState('');
 
+useEffect(() => {
+  const loadName = async () => {
+    try {
+      const first = await AsyncStorage.getItem('firstName');
+      const last = await AsyncStorage.getItem('lastName');
+      console.log('Got from storage:', first, last);
+      setFullName(`${first || ''} ${last || ''}`);
+    } catch (e) {
+      console.error('Error loading name:', e);
+    }
+  };
+
+  loadName();
+}, []); // Runs once when the component mounts
+
+useEffect(() => {
+  if (fullName) {
+    console.log(fullName, 'updated full name'); // ✅ This runs whenever fullName changes
+  }
+}, [fullName]); 
 
 const handleLaunchGallery = () => {
   launchImageLibrary(
@@ -161,7 +184,7 @@ const removeImage = (indexToRemove: number) => {
                 style={styles.profileImage}
               />
               <View style={styles.textContainer}>
-                <Text style={styles.username}>John Smith</Text>
+                <Text style={styles.username}>{fullName}</Text>
                 <Text style={styles.location}>Auckland, New Zealand</Text>
               </View>
             </View>

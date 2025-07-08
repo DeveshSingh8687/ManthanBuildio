@@ -71,7 +71,22 @@ const ChatListScreen = () => {
     return `https://randomuser.me/api/portraits/${gender}/${imgNum}.jpg`;
   };
     const [messages, setMessages] = useState<Message[]>([]);
-  
+    const [chatList, setChatList] = useState<any[]>([]);
+    const fetchChats = async () => {
+  const myUserId = await AsyncStorage.getItem('USERID');
+  const chatQuerySnapshot = await fireStore()
+    .collection('chats')
+    .where('participants', 'array-contains', myUserId)
+    .orderBy('lastMessageTime', 'desc')
+    .get();
+
+  const chats = chatQuerySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  setChatList(chats);
+};
   const chatIdA = chatId || 'defaultChatId'; // Fallback to a default chat ID if not set
    useEffect(() => {
     const unsubscribe = fireStore()
@@ -94,6 +109,7 @@ const ChatListScreen = () => {
 
     return unsubscribe;
   }, [chatIdA]);
+  
   console.log(messages)
   const renderItem = ({item, index}: {item: any; index: number}) => (
     <TouchableOpacity

@@ -2,30 +2,28 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
-import fireStore from '@react-native-firebase/firestore';
+// const saveUserToFirestore = async () => {
+//   const user = auth().currentUser;
+//   console.log('Current User:', user?.displayName);
+//   if (user?.email) {
+//     console.log('No email found for the user, skipping Firestore save.');
+// try {
+//   console.log('No email found for the user, skipping Firestore save.');
+//     await fireStore().collection('users').doc(user?.uid).set({
+//       uid: user?.uid,
+//       name: user?.displayName || '',
+//       createdAt: fireStore.FieldValue.serverTimestamp(),
+//       email: user?.email || '',
+//     });
+//       await AsyncStorage.setItem('USERID', user.uid);
+//     console.log('User added!,user.uid:', user.uid);
+//     navigation.navigate('Login');
+//   } catch (error) {
+//     console.error('Error adding user: ', error);
 
-
-const saveUserToFirestore = async () => {
-  const user = auth().currentUser;
-  console.log('Current User:', user?.displayName);
-  if (user?.email) {
-    console.log('No email found for the user, skipping Firestore save.');
-try {
-  console.log('No email found for the user, skipping Firestore save.');
-    await fireStore().collection('users').doc(user?.uid).set({
-      uid: user?.uid,
-      name: user?.displayName || '',
-      createdAt: fireStore.FieldValue.serverTimestamp(),
-      email: user?.email || '',
-    });
-    console.log('User added!');
-    navigation.navigate('Login');
-  } catch (error) {
-    console.error('Error adding user: ', error);
-
-  }
-};
-  };
+//   }
+// };
+//   };
 
 
   // const doc = await userRef.get();
@@ -67,7 +65,6 @@ export const _signInWithGoogle = async (navigation) => {
     console.log('Google Sign-In User Info:', userInfo);
     const { idToken } = userInfo.data;
     if (!idToken) throw new Error('No ID token received');
-    await AsyncStorage.setItem('USERID', userInfo.data.user.id);
     await AsyncStorage.setItem('EMAIL', userInfo.data.user.email);
 
     // 6. Sign in with Firebase
@@ -77,10 +74,10 @@ export const _signInWithGoogle = async (navigation) => {
     console.log('Logged in as:', user.email);
 
     // --- Add this line to save user info to Firestore ---
-    await saveUserToFirestore();
+    // await saveUserToFirestore();
 
     // 7. Store new user ID
-    await AsyncStorage.setItem('USERID', idToken);
+    // await AsyncStorage.setItem('USERID', idToken);
 
     // 8. Navigate to Home
     navigation.navigate('HomeScreen');
@@ -176,3 +173,4 @@ export const logout = async () => {
     return false;
   }
 };
+
