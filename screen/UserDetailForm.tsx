@@ -35,15 +35,38 @@ const AddJobScreen = ({
 }: {
   route: RouteProp<RootStackParamList, keyof RootStackParamList>;
 }) => {
-  const userData = (route.params as any)?.userData; // If you need userData, use: const userData = (route.params as any)?.userData;
+  const userData = (route.params as any)?.userData;
+  console.log(userData, 'userdata'); // If you need userData, use: const userData = (route.params as any)?.userData;
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedJobs, setSelectedJobs] = useState<number[]>([]);
-  console.log('Selected Jobs:', selectedJobs);
+  const [selectedJobs, setSelectedJobs] = useState<any[]>([]);
+  const getUserId = async () => {
+    const userIdStr = (await AsyncStorage.getItem('USERID')) || '';
+    return userIdStr ? parseInt(userIdStr, 10) : null;
+  };
+
+  const prepareUserJobTypes = async (selectedJobs: any) => {
+    const userId = await getUserId();
+    // const timestamp = new Date().toISOString();
+    console.log('User ID:', userId);
+
+    if (!userId) {
+      throw new Error('User ID not found in AsyncStorage');
+    }
+
+    const userJobTypes = selectedJobs.map((job: {id: any}) => ({
+      user_id: userId,
+      id: job.id,
+      // created_at: timestamp,
+      // updated_at: timestamp,
+    }));
+
+    return userJobTypes;
+  };
 
   const handleCamera = async () => {
     if (Platform.OS === 'android') {
@@ -75,17 +98,24 @@ const AddJobScreen = ({
       }
     });
   };
-
+  useEffect(() => {
+    if (userData?.user_job_types) {
+      const jobIds = userData.user_job_types.map(
+        (item: {job_type_id: any}) => item.job_type_id,
+      );
+      setSelectedJobs(jobIds);
+    }
+  }, [userData]);
   useEffect(() => {
     if (userData) {
       setFormData({
         Name: userData.first_name || '',
         'Last Name': userData.last_name || '',
         'Phone Number': userData.phone_number || '',
-        Description: userData.about || '',
-        Experience: userData.experience || '',
+        'about': userData.about || 'this is about',
+        'Experience': userData.experience || '',
         Email: userData.email || '',
-        'Job Type': userData.user_job_types?.[0] || '', // adjust if needed
+        'Job Type': userData.user_job_types?.[0] || '',
       });
       setSelectedImage(userData.profile_picture || null);
     }
@@ -138,19 +168,35 @@ const AddJobScreen = ({
     'Last Name',
     'Email',
     'Phone Number',
-    'Description',
+    'about',
     'Experience',
   ];
 
   const isMultiline = (label: string) =>
     label === 'Description' || label === 'Experience';
 
-  const handleInputChange = (label: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [label]: value,
-    }));
-  };
+const handleInputChange = (label: string, value: string) => {
+  setFormData(prev => ({
+    ...prev,
+    [label]: value,
+  }));
+
+  setErrors(prevErrors => {
+    const newErrors = { ...prevErrors };
+
+    if (label === 'Phone Number') {
+      if (/^\d+$/.test(value)) {
+        delete newErrors['Phone Number']; // ✅ clear error on valid input
+      }
+    }
+
+    if (label === 'Name' && value.trim() !== '') {
+      delete newErrors['Name'];
+    }
+
+    return newErrors;
+  });
+};
 
   useEffect(() => {
     const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
@@ -166,19 +212,23 @@ const AddJobScreen = ({
     };
   }, []);
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
+ const validateForm = () => {
+  const errors: Record<string, string> = {};
 
-    if (!formData['Description'])
-      errors['Description'] = 'Description is required.';
-    if (!formData['Name']) errors['Name'] = 'Name is required.';
-    if (!formData['Experience'])
-      errors['Experience'] = 'Experience is required.';
-    if (!formData['Email']) errors['Email'] = 'Email is required.';
+  if (!formData['Name']) {
+    errors['Name'] = 'Name is required.';
+  }
 
-    setErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  const phone = formData['Phone Number'];
+  if (!phone) {
+    errors['Phone Number'] = 'Phone number is required.';
+  } else if (!/^\d+$/.test(phone)) {
+    errors['Phone Number'] = 'Phone number must contain only digits.';
+  }
+
+  setErrors(errors);
+  return Object.keys(errors).length === 0;
+};
 
   // const handleSubmit = () => {
   //   if (!validateForm()) return;
@@ -187,6 +237,7 @@ const AddJobScreen = ({
   // };
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
     const token = await AsyncStorage.getItem('authToken');
     const uri = selectedImage;
 
@@ -198,20 +249,23 @@ const AddJobScreen = ({
 
     const fileName = uri.split('/').pop() || 'profile.jpg';
     const fileType = fileName.split('.').pop();
+    // const jobTypesPayload = selectedJobs?.map(id => ({job_type_id: id}));
+    const userJobTypesPayload = await prepareUserJobTypes(selectedJobs);
+    console.log('User Job Types Payload:', selectedJobs);
 
     const form = new FormData();
     form.append('first_name', formData['Name'] || '');
     form.append('last_name', formData['Last Name'] || '');
     form.append('phone_number', formData['Phone Number'] || '');
-    console.log('Phone Number:', formData['Phone Number']);
-  form.append('user_job_types', selectedJobs); // ✅ Key line
-    // console.log(form.append('phone_number', Number(formData['Phone Number'] || 0)));
+    form.append('about', formData['about'] || '');
+    selectedJobs.forEach(jobId => {
+      form.append('user_job_types', jobId);
+    });
     form.append('profile_picture', {
       uri: selectedImage,
-      name: fileName || `photo.jpg`, // must not be undefined
+      name: fileName || `photo.jpg`,
       type: `image/${fileType || 'jpg'}`, // should be like image/jpg or image/jpeg
     });
-
     try {
       const response = await fetch('https://buildio.co.nz/api/users/update', {
         method: 'POST',
@@ -231,6 +285,7 @@ const AddJobScreen = ({
         navigation.navigate('AccountScreen');
       } else {
         Alert.alert(`Failed to update: ${result.message || 'Unknown error'}`);
+        console.error('Update error:', result);
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -276,8 +331,8 @@ const AddJobScreen = ({
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        behavior={undefined}
+        keyboardVerticalOffset={0}>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
@@ -312,7 +367,12 @@ const AddJobScreen = ({
             );
           })}
 
-          <CustomJobSelector onSelectionChange={setSelectedJobs} />
+          <CustomJobSelector
+            preselectedIds={userData.user_job_types.map(
+              (j: {job_type_id: any}) => j.job_type_id,
+            )}
+            onSelectionChange={setSelectedJobs}
+          />
           <View style={styles.inputCard}>
             <Text style={styles.label}>Add image</Text>
             <View style={styles.imageRow}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,20 +17,22 @@ type JobCategory = { title: string; items: JobItem[] };
 
 interface Props {
   onSelectionChange: (selectedJobIds: number[]) => void;
+  preselectedIds?: number[];
 }
 
-const CustomJobSelector = ({ onSelectionChange }: Props) => {
+const CustomJobSelector = ({ onSelectionChange, preselectedIds }: Props) => {
   const [jobCategories, setJobCategories] = useState<JobCategory[]>([]);
   const [selectedJobs, setSelectedJobs] = useState<JobItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-
+console.log('Selected Jobs:', selectedJobs);
   useEffect(() => {
     const fetchJobTypes = async () => {
       try {
         const response = await fetch('https://buildio.co.nz/api/common/job_types_list');
         const json = await response.json();
+        console.log('Job Types Response:', json);
         const categories: JobCategory[] = json.data.services.map((cat: any) => ({
           title: cat.category,
           items: cat.subcategories.map((sub: any) => ({
@@ -48,17 +50,32 @@ const CustomJobSelector = ({ onSelectionChange }: Props) => {
 
     fetchJobTypes();
   }, []);
+const hasInitialized = useRef(false);
 
-  const handleItemToggle = (item: JobItem) => {
-    const isSelected = selectedJobs.some(job => job.id === item.id);
-    const updated = isSelected
-      ? selectedJobs.filter(job => job.id !== item.id)
-      : [...selectedJobs, item];
+useEffect(() => {
+  if (
+    !hasInitialized.current &&
+    preselectedIds?.length &&
+    jobCategories.length > 0
+  ) {
+    const allItems = jobCategories.flatMap(cat => cat.items);
+    const matchedJobs = allItems.filter(item => preselectedIds.includes(item.id));
 
-    setSelectedJobs(updated);
-    onSelectionChange(updated.map(job => job.id));
-  };
+    setSelectedJobs(matchedJobs);
+    onSelectionChange(matchedJobs.map(job => job.id));
 
+    hasInitialized.current = true; // ✅ Prevent further runs
+  }
+}, [preselectedIds, jobCategories]);
+const handleItemToggle = (item: JobItem) => {
+  const isSelected = selectedJobs.some(job => job.id === item.id);
+  const updated = isSelected
+    ? selectedJobs.filter(job => job.id !== item.id)
+    : [...selectedJobs, item];
+
+  setSelectedJobs(updated);
+  onSelectionChange(updated.map(job => job.id));
+};
   const filteredCategories = jobCategories
     .map(category => ({
       ...category,

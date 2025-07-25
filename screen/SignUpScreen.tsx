@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,13 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { RootStackParamList } from '../navigation/Navigation';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import {RootStackParamList} from '../navigation/Navigation';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
 import fireStore from '@react-native-firebase/firestore';
 import uuid from 'react-native-uuid';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { _signInWithGoogle, onFacebookButtonPress } from './config/auth';
-
+import {_signInWithGoogle, onFacebookButtonPress} from './config/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -32,104 +32,104 @@ export default function SignUpScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const handleChange = (field: keyof typeof formData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({...prev, [field]: value}));
   };
-    async function onGoogleButtonPress() {
-      _signInWithGoogle(navigation);
+  async function onGoogleButtonPress() {
+    _signInWithGoogle(navigation);
+  }
+
+  const registerUser = async () => {
+    const {firstName, lastName, email, password} = formData;
+
+    const nameRegex = /^[A-Za-z]{2,}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+
+    if (!firstName || !lastName || !email || !password) {
+      Alert.alert('Validation Error', 'Please fill all fields');
+      return;
     }
 
+    if (!nameRegex.test(firstName)) {
+      Alert.alert('Validation Error', 'First name must be added.');
+      return;
+    }
 
-const registerUser = async () => {
-  const { firstName, lastName, email, password } = formData;
+    if (!nameRegex.test(lastName)) {
+      Alert.alert('Validation Error', 'Last name must be added.');
+      return;
+    }
 
-  const nameRegex = /^[A-Za-z]{2,}$/;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address.');
+      return;
+    }
 
-  if (!firstName || !lastName || !email || !password) {
-    Alert.alert('Validation Error', 'Please fill all fields');
-    return;
-  }
-
-  if (!nameRegex.test(firstName)) {
-    Alert.alert('Validation Error', 'First name must be at least 2 letters with no numbers or symbols.');
-    return;
-  }
-
-  if (!nameRegex.test(lastName)) {
-    Alert.alert('Validation Error', 'Last name must be at least 2 letters with no numbers or symbols.');
-    return;
-  }
-
-  if (!emailRegex.test(email)) {
-    Alert.alert('Validation Error', 'Please enter a valid email address.');
-    return;
-  }
-
-  if (!passwordRegex.test(password)) {
-    Alert.alert(
-      'Validation Error',
-      'Password must be at least 6 characters long and contain at least one letter and one number.'
-    );
-    return;
-  }
-
-  const userId = uuid.v4() as string;
+    if (!passwordRegex.test(password)) {
+      Alert.alert(
+        'Validation Error',
+        'Password must be at least 6 characters long and contain at least one letter and one number.',
+      );
+      return;
+    }
 
     try {
-    const response = await fetch('https://buildio.co.nz/api/auth/sign_up', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        password: password,
-      }),
-    });
+      const response = await fetch('https://buildio.co.nz/api/auth/sign_up', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          password,
+        }),
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('User signed up successfully:', data);
-      Alert.alert('Success', 'User signed up successfully!');
-      // Optionally navigate or save token
-    } else {
-      const errorData = await response.json();
-      console.error('Sign-up failed:', errorData);
-      Alert.alert('Sign Up Failed', errorData.message || 'Something went wrong');
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.data?.token;
+        console.log('Sign-up successful:', token);
+
+        if (token) {
+          await AsyncStorage.setItem('authToken', token);
+
+          Alert.alert('Success', 'User signed up successfully!');
+          navigation.reset({
+            index: 0,
+            routes: [{name: 'HomeScreen'}],
+          });
+        } else {
+          Alert.alert('Error', 'No token returned from server');
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Sign-up failed:', errorData);
+        Alert.alert(
+          'Sign Up Failed',
+          errorData.message || 'Something went wrong',
+        );
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Error', 'Network error or server not reachable');
     }
-  } catch (error) {
-    console.error('Error:', error);
-    Alert.alert('Error', 'Network error or server not reachable');
-  }
-  // try {
-  //   await fireStore().collection('users').doc(userId).set({
-  //     firstName,
-  //     lastName,
-  //     email,
-  //     password,
-  //     createdAt: fireStore.FieldValue.serverTimestamp(),
-  //   });
-  //   console.log('User added!');
-  //   navigation.navigate('Login');
-  // } catch (error) {
-  //   console.error('Error adding user: ', error);
-  //   Alert.alert('Error', 'Failed to register user. Try again later.');
-  // }
-};
+  };
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{flex: 1}}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-    >
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled">
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={navigation.goBack}>
             <Icon name="arrow-back" size={28} color="#333" />
           </TouchableOpacity>
 
@@ -140,14 +140,14 @@ const registerUser = async () => {
             placeholder="First name"
             placeholderTextColor="#999"
             value={formData.firstName}
-            onChangeText={(text) => handleChange('firstName', text)}
+            onChangeText={text => handleChange('firstName', text)}
           />
           <TextInput
             style={styles.input}
             placeholder="Last name"
             placeholderTextColor="#999"
             value={formData.lastName}
-            onChangeText={(text) => handleChange('lastName', text)}
+            onChangeText={text => handleChange('lastName', text)}
           />
           <TextInput
             style={styles.input}
@@ -156,7 +156,7 @@ const registerUser = async () => {
             keyboardType="email-address"
             autoCapitalize="none"
             value={formData.email}
-            onChangeText={(text) => handleChange('email', text)}
+            onChangeText={text => handleChange('email', text)}
           />
 
           <View style={styles.passwordContainer}>
@@ -166,10 +166,14 @@ const registerUser = async () => {
               placeholderTextColor="#999"
               secureTextEntry={!passwordVisible}
               value={formData.password}
-              onChangeText={(text) => handleChange('password', text)}
+              onChangeText={text => handleChange('password', text)}
             />
-            <TouchableOpacity onPress={() => setPasswordVisible((prev) => !prev)}>
-              <Icon name={passwordVisible ? 'visibility' : 'visibility-off'} size={20} color="#999" />
+            <TouchableOpacity onPress={() => setPasswordVisible(prev => !prev)}>
+              <Icon
+                name={passwordVisible ? 'visibility' : 'visibility-off'}
+                size={20}
+                color="#999"
+              />
             </TouchableOpacity>
           </View>
 
@@ -178,33 +182,33 @@ const registerUser = async () => {
           </TouchableOpacity>
 
           <View style={styles.signUpContainer}>
-                    <Text style={{color: '#999'}}>Create New Account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                      <Text style={styles.signUpText}>Login</Text>
-                    </TouchableOpacity>
-                  </View>
-                    <TouchableOpacity
-                              style={styles.socialButton}
-                              onPress={onGoogleButtonPress}>
-                              <FontAwesome
-                                name="google"
-                                size={20}
-                                color="#EA4335"
-                                style={styles.socialIcon}
-                              />
-                              <Text style={styles.socialText}>Sign up with Google</Text>
-                            </TouchableOpacity>
-                                  <TouchableOpacity
-                                        style={styles.socialButton}
-                                        onPress={() => onFacebookButtonPress(navigation)}>
-                                        <FontAwesome
-                                          name="facebook"
-                                          size={20}
-                                          color="#3b5998"
-                                          style={styles.socialIcon}
-                                        />
-                                        <Text style={styles.socialText}>Sign up with Facebook</Text>
-                                      </TouchableOpacity>
+            <Text style={{color: '#999'}}>Create New Account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.signUpText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={onGoogleButtonPress}>
+            <FontAwesome
+              name="google"
+              size={20}
+              color="#EA4335"
+              style={styles.socialIcon}
+            />
+            <Text style={styles.socialText}>Sign up with Google</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={() => onFacebookButtonPress(navigation)}>
+            <FontAwesome
+              name="facebook"
+              size={20}
+              color="#3b5998"
+              style={styles.socialIcon}
+            />
+            <Text style={styles.socialText}>Sign up with Facebook</Text>
+          </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-    signUpText: {
+  signUpText: {
     fontWeight: 'bold',
     color: '#6264A7',
   },
@@ -284,7 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#555',
   },
-    socialButton: {
+  socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
@@ -295,10 +299,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 12,
   },
-   socialIcon: {
+  socialIcon: {
     marginRight: 12,
   },
-    socialText: {
+  socialText: {
     fontSize: 16,
     color: '#333',
   },

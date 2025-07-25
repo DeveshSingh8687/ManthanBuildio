@@ -11,6 +11,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NavigationProp, useNavigation } from '@react-navigation/core';
@@ -20,6 +21,8 @@ const ForgetPassword = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [otp, setOtp] = useState('');
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
@@ -41,7 +44,7 @@ const ForgetPassword = () => {
       console.log('Response:', result);
 
       if (response.ok && result.status) {
-        Alert.alert('Success', 'OTP sent successfully');
+        setOtpModalVisible(true);
       } else {
         Alert.alert('Failed', result.message || 'Something went wrong');
       }
@@ -62,9 +65,12 @@ const ForgetPassword = () => {
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={28} color="#333" />
-          </TouchableOpacity>
+          
+          {!otpModalVisible && (
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Icon name="arrow-back" size={28} color="#333" />
+            </TouchableOpacity>
+          )}
 
           <Text style={styles.title}>Forget Password</Text>
 
@@ -83,7 +89,7 @@ const ForgetPassword = () => {
 
           <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
             <Text style={styles.resetButtonText}>
-              {loading ? 'Sending...' : 'Reset password'}
+              {loading ? 'Sending...' : 'Send Otp'}
             </Text>
           </TouchableOpacity>
 
@@ -94,6 +100,38 @@ const ForgetPassword = () => {
           </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
+
+      {/* OTP Modal */}
+      <Modal
+        visible={otpModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOtpModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Enter OTP</Text>
+
+            <TextInput
+              placeholder="OTP"
+              placeholderTextColor="#999"
+              style={styles.modalInput}
+              keyboardType="numeric"
+              value={otp}
+              onChangeText={setOtp}
+            />
+
+            <TouchableOpacity style={styles.resetButton}>
+              <Text style={styles.resetButtonText}>Reset Password</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setOtpModalVisible(false)}
+              style={styles.closeModalButton}>
+              <Text style={styles.closeModalText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -105,7 +143,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#f9f9f9',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 70, // Adjusted to move content ~50px upward
   },
   title: {
     fontSize: 24,
@@ -124,7 +162,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: '#fff',
     justifyContent: 'center',
-    marginTop: 70,
+    marginTop: 30,
   },
   infoText: {
     fontSize: 14,
@@ -139,6 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginBottom: 16,
     alignItems: 'center',
+    width: '100%',
   },
   resetButtonText: {
     color: '#fff',
@@ -146,8 +185,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   backButton: {
-    marginBottom: 160,
-    marginTop: 20,
+    marginBottom: 120,
+    marginTop: 10,
   },
   backButtonText: {
     color: '#fff',
@@ -159,5 +198,43 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 25,
     alignItems: 'center',
+  },
+
+  // OTP Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 25,
+    borderRadius: 15,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#1e1e5d',
+  },
+  modalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  closeModalButton: {
+    marginTop: 10,
+  },
+  closeModalText: {
+    color: '#6264A7',
+    fontWeight: '600',
   },
 });

@@ -18,6 +18,7 @@ import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logout } from './config/auth';
 
 const profileData = {
   name: 'John Doe',
@@ -104,9 +105,9 @@ const AccountScreen = () => {
     } as any);
   };
 
-  const handleLogout = () => {
-    console.log('Logout pressed');
-  };
+  // const handleLogout = () => {
+  //   console.log('Logout pressed');
+  // };
 
   const renderRow = (label: string, p0: () => void) => {
     const onPress = () => {
@@ -186,7 +187,7 @@ const AccountScreen = () => {
 
             <TouchableOpacity
               style={styles.logoutButton}
-              onPress={handleLogout}>
+              onPress={logout}>
               <Icon name="log-out-outline" size={20} color="#fff" />
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>
