@@ -23,7 +23,7 @@ export default function WelcomeScreen3() {
   const [isPressed, setIsPressed] = useState(false);
 
   const handlePress = () => {
-    navigation.navigate('Login');
+    navigation.navigate('HomeScreen');
   };
 
   return (

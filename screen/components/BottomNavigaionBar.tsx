@@ -4,11 +4,11 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../navigation/Navigation';
+import { handleSecurePress } from '../config/auth';
 
 const BottomTabBar = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
   const [activeTab, setActiveTab] = useState<string>('Home');
 
   return (
@@ -17,7 +17,7 @@ const BottomTabBar = () => {
         style={styles.navItem}
         onPress={() => {
           setActiveTab('Home');
-          navigation.navigate('HomeScreen');
+          handleSecurePress('HomeScreen', navigation);
         }}>
         <Icon
           name="home-outline"
@@ -29,7 +29,10 @@ const BottomTabBar = () => {
 
       <TouchableOpacity
         style={styles.navItem}
-        onPress={() => setActiveTab('Booking')}>
+        onPress={() => {
+          setActiveTab('Booking');
+          handleSecurePress('BookingScreen', navigation); // Replace with actual screen name
+        }}>
         <Icon
           name="pricetags-outline"
           size={24}
@@ -42,7 +45,7 @@ const BottomTabBar = () => {
         style={styles.fab}
         onPress={() => {
           setActiveTab('Add');
-          navigation.navigate('AddPostScreen');
+          handleSecurePress('AddPostScreen', navigation);
         }}>
         <Icon name="add" size={28} color="#fff" />
       </TouchableOpacity>
@@ -51,7 +54,7 @@ const BottomTabBar = () => {
         style={styles.navItem}
         onPress={() => {
           setActiveTab('Chat');
-          navigation.navigate('ChatListScreen');
+          handleSecurePress('ChatListScreen', navigation);
         }}>
         <Icon
           name="chatbubble-outline"
@@ -63,7 +66,10 @@ const BottomTabBar = () => {
 
       <TouchableOpacity
         style={styles.navItem}
-        onPress={() => setActiveTab('Notify')}>
+        onPress={() => {
+          setActiveTab('Notify');
+          handleSecurePress('NotificationScreen', navigation); // Replace with actual screen name
+        }}>
         <Icon
           name="notifications-outline"
           size={24}
@@ -74,7 +80,6 @@ const BottomTabBar = () => {
     </View>
   );
 };
-
 const styles = StyleSheet.create({
   bottomNav: {
     position: 'absolute',

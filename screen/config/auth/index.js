@@ -1,7 +1,7 @@
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
+import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
 // const saveUserToFirestore = async () => {
 //   const user = auth().currentUser;
 //   console.log('Current User:', user?.displayName);
@@ -25,21 +25,64 @@ import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 // };
 //   };
 
+// const doc = await userRef.get();
+// if (!doc.exists) {
+//   await userRef.set({
+//     uid: user.uid,
+//     name: user?.displayName || '',
+//   });
+// }
+export const socialLoginAPI = async ({
+  email,
+  first_name,
+  social_media_provider,
+  provider_token,
+}) => {
+  try {
+    const response = await fetch(
+      'http://4.245.1.145:4000/api/auth/social_login',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          first_name,
+          social_media_provider,
+          provider_token,
+        }),
+      },
+    );
 
-  // const doc = await userRef.get();
-  // if (!doc.exists) {
-  //   await userRef.set({
-  //     uid: user.uid,
-  //     name: user?.displayName || '',
-  //   });
-  // }
+    const data = await response.json();
 
+    if (!response.ok) {
+      console.error('Social login API error:', data);
+      throw new Error(data.message || 'Login failed');
+    }
 
-export const _signInWithGoogle = async (navigation) => {
+    console.log('Social login API success:', data);
+    const token = data.data.token;
+    const firstName = data.data.user?.first_name;
+    const lastName = data.data.user?.last_name;
+    console.log(token, firstName, lastName);
+    await AsyncStorage.setItem('authToken', token);
+    // await AsyncStorage.setItem('firstName', firstName);
+    // await AsyncStorage.setItem('lastName', lastName);
+    return data;
+  } catch (error) {
+    console.error('Network/API error:', error.message || error);
+    throw error;
+  }
+};
+
+export const _signInWithGoogle = async navigation => {
   try {
     // 1. Configure Google Sign-In
     GoogleSignin.configure({
-      webClientId: '1008533442966-fi407kv4vf3n272nj9di3nem6k3tia29.apps.googleusercontent.com',
+      webClientId:
+        '1008533442966-fi407kv4vf3n272nj9di3nem6k3tia29.apps.googleusercontent.com',
       offlineAccess: false,
       scopes: ['profile', 'email'],
     });
@@ -59,19 +102,28 @@ export const _signInWithGoogle = async (navigation) => {
     await AsyncStorage.removeItem('EMAIL');
 
     // 4. Ensure Google Play Services are available
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
     // 5. Trigger Gmail account picker
     const userInfo = await GoogleSignin.signIn();
-    console.log('Google Sign-In User Info:', userInfo);
-    const { idToken } = userInfo.data;
+    // console.log('Google Sign-In User Info:', userInfo);
+    const {idToken} = userInfo.data;
     if (!idToken) throw new Error('No ID token received');
     await AsyncStorage.setItem('EMAIL', userInfo.data.user.email);
 
     // 6. Sign in with Firebase
     const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-    const firebaseUserCredential = await auth().signInWithCredential(googleCredential);
+    const firebaseUserCredential = await auth().signInWithCredential(
+      googleCredential,
+    );
     const user = firebaseUserCredential.user;
-    console.log('Logged in as:', user.email);
+    // console.log('Logged in as:', userInfo);
+
+    const apiResponse = await socialLoginAPI({
+      email: userInfo.data.user.email,
+      first_name: userInfo.data.user.givenName,
+      social_media_provider: 'Google',
+      provider_token: userInfo.data.user.id,
+    });
 
     // --- Add this line to save user info to Firestore ---
     // await saveUserToFirestore();
@@ -88,39 +140,37 @@ export const _signInWithGoogle = async (navigation) => {
     return null;
   }
 };
-  export async function onFacebookButtonPress(navigation) {
-    console.log('Facebook button pressed');
-    // Attempt login with permissions
-    const result = await LoginManager.logInWithPermissions([
-      'public_profile',
-      'email',
-    ]);
-    console.log('Login result:', result);
+export async function onFacebookButtonPress(navigation) {
+  console.log('Facebook button pressed');
+  // Attempt login with permissions
+  const result = await LoginManager.logInWithPermissions([
+    'public_profile',
+    'email',
+  ]);
+  console.log('Login result:', result);
 
-    if (result.isCancelled) {
-      // navigation.navigate('HomeScreen');
+  if (result.isCancelled) {
+    // navigation.navigate('HomeScreen');
 
-      throw 'User cancelled the login process';
-    }
-
-    // Once signed in, get the users AccessToken
-    const data = await AccessToken.getCurrentAccessToken();
-    navigation.navigate('HomeScreen');
-
-    if (!data) {
-      throw 'Something went wrong obtaining access token';
-    }
-
-    // Create a Firebase credential with the AccessToken
-    const facebookCredential = FacebookAuthProvider.credential(
-      data.accessToken,
-    );
-    await getAuth().signInWithCredential(facebookCredential);
-    console.log('Facebook credential:', facebookCredential);
-
-    // Sign-in the user with the credential
-    return signInWithCredential(getAuth(), facebookCredential);
+    throw 'User cancelled the login process';
   }
+
+  // Once signed in, get the users AccessToken
+  const data = await AccessToken.getCurrentAccessToken();
+  navigation.navigate('HomeScreen');
+
+  if (!data) {
+    throw 'Something went wrong obtaining access token';
+  }
+
+  // Create a Firebase credential with the AccessToken
+  const facebookCredential = FacebookAuthProvider.credential(data.accessToken);
+  await getAuth().signInWithCredential(facebookCredential);
+  console.log('Facebook credential:', facebookCredential);
+
+  // Sign-in the user with the credential
+  return signInWithCredential(getAuth(), facebookCredential);
+}
 
 export const logout = async () => {
   console.log('Logging out...');
@@ -137,7 +187,10 @@ export const logout = async () => {
         console.log('Not signed in with Google');
       }
     } catch (googleError) {
-      console.log('Google sign out error/skipped:', googleError?.message || googleError);
+      console.log(
+        'Google sign out error/skipped:',
+        googleError?.message || googleError,
+      );
     }
 
     // ✅ Facebook Sign-Out (if used)
@@ -148,7 +201,10 @@ export const logout = async () => {
         console.log('Logged out from Facebook');
       }
     } catch (fbError) {
-      console.log('Facebook sign out error/skipped:', fbError?.message || fbError);
+      console.log(
+        'Facebook sign out error/skipped:',
+        fbError?.message || fbError,
+      );
     }
 
     // ✅ Firebase Sign-Out (always call this)
@@ -156,7 +212,10 @@ export const logout = async () => {
       await auth().signOut();
       console.log('Logged out from Firebase');
     } catch (firebaseError) {
-      console.log('Firebase sign out error:', firebaseError?.message || firebaseError);
+      console.log(
+        'Firebase sign out error:',
+        firebaseError?.message || firebaseError,
+      );
     }
 
     // ✅ Clear AsyncStorage
@@ -164,7 +223,10 @@ export const logout = async () => {
       await AsyncStorage.clear();
       console.log('AsyncStorage cleared');
     } catch (storageError) {
-      console.log('AsyncStorage clear error:', storageError?.message || storageError);
+      console.log(
+        'AsyncStorage clear error:',
+        storageError?.message || storageError,
+      );
     }
 
     return true;
@@ -174,3 +236,14 @@ export const logout = async () => {
   }
 };
 
+export const handleSecurePress = async (screen, navigation) => {
+    const authToken = await AsyncStorage.getItem('authToken');
+   if (authToken && authToken.trim() !== '') {
+  navigation.navigate(screen);
+} else {
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'Login' }],
+  });
+}
+  };

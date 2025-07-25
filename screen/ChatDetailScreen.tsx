@@ -40,9 +40,9 @@ const ChatScreen = () => {
   const route = useRoute();
   const {myChatId, data} = route.params as {
     myChatId: string;
-    data: {id: string; firstName: string; lastName: string; name: string};
+    data: {id: string; first_name: string; last_name: string; name: string};
   };
-
+console.log('Route Params:', data);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(20);
@@ -51,6 +51,7 @@ const ChatScreen = () => {
 
   const chatIdA = `${data.id}${myChatId}`;
   const chatIdB = `${myChatId}${data.id}`;
+  console.log('Chat IDs:', chatIdA, chatIdB);
 
   const scrollToBottom = useCallback(() => {
     if (flatListRef.current && messages.length > 0) {
@@ -177,9 +178,10 @@ const generateChatId = (userId1: string, userId2: string): string => {
   // };
   
 useEffect(() => {
-  if (!myChatId || !data?.id) return;
+  if (!myChatId || !data?.id) {console.log('inthere');}
 
   const chatId = generateChatId(myChatId, data.id);
+  console.log('Chat ID:', chatId, 'My Chat ID:', myChatId, 'Data ID:', data.id);
   console.log('Chat ID:', myChatId,'data ID:', data.id, 'Generated Chat ID:', chatId);
 
   const unsubscribe = fireStore()
@@ -418,8 +420,8 @@ console.log('Messages:', messages);
               
               <View>
                 <Text style={styles.name}>
-                  {data.firstName && data.lastName
-                    ? `${data.firstName} ${data.lastName}`
+                  {data.first_name && data.last_name
+                    ? `${data.first_name} ${data.last_name}`
                     : data.name}
                 </Text>
                 <Text style={styles.status}>● Online</Text>

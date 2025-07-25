@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {
@@ -12,6 +12,7 @@ import {
   FlatList,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 // import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
@@ -26,9 +27,11 @@ import NewsFeed from './NewsScreen';
 import {Icon} from 'react-native-elements';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { handleSecurePress } from './config/auth';
 
 const {height} = Dimensions.get('window');
-const NavPopup = ({visible, onClose}: any) => {
+const NavPopup = ({ visible, onClose }: any) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (
@@ -42,326 +45,185 @@ const NavPopup = ({visible, onClose}: any) => {
         activeOpacity={1}
         onPress={onClose}>
         <View style={styles.navContainer}>
-          {/* User Profile Section */}
-          {/* <View style={styles.profileSection}>
-            <Image
-              source={{ uri: 'https://i.pravatar.cc/150?img=3' }}
-              style={styles.profileImage}
-            />
-            <Text style={styles.profileName}>John Smith</Text>
-            <Text style={styles.profileSubText}>Software Developer</Text>
-          </View> */}
-
-          {/* Menu Options */}
           <TouchableOpacity
             style={styles.navItemMenu}
             onPress={() => navigation.navigate('AccountScreen')}>
-            <Icon
-              name="account-circle"
-              type="material"
-              size={24}
-              // color="#000"
-            />{' '}
+            <Icon name="account-circle" type="material" size={24} />
             <Text style={styles.navText}>Profile</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.navItemMenu}
             onPress={() => navigation.navigate('JobsSection')}>
-            <Icon
-              name="assignment"
-              type="material"
-              size={24}
-              // color="#FF0000"
-            />{' '}
+            <Icon name="assignment" type="material" size={24} />
             <Text style={styles.navText}>Jobs</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navItemMenu}>
             <Icon name="logout" type="material" size={24} color="#FF3B30" />
-            <Text style={[styles.navText, {color: '#FF3B30'}]}>Logout</Text>
+            <Text style={[styles.navText, { color: '#FF3B30' }]}>Logout</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
   );
 };
+
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [tokenChecked, setTokenChecked] = useState(false);
 
-  // const jobPosts = [
-  //   {
-  //     id: 1,
-  //     user: 'Sadie Shelton',
-  //     date: 'Jan 05, 2024',
-  //     text: 'Just finished this challenging but rewarding renovation project. Loved the transformation!',
-  //     image: 'https://picsum.photos/id/1/200/300',
-  //     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-  //   },
-  //   {
-  //     id: 2,
-  //     user: 'Sadie Shelton',
-  //     date: 'Jan 05, 2024',
-  //     text: 'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-  //     image: 'https://loremflicker.com',
-  //     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-  //   },
-  //   {
-  //     id: 3,
-  //     user: 'Sadie Shelton',
-  //     date: 'Jan 05, 2024',
-  //     text: 'Hiring experienced carpenters and roofers for upcoming projects. Contact us for more info!',
-  //     image: 'https://picsum.photos/200/300.jpg',
-  //     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-  //   },
-  // ];
-  const handlePress = () => {
-    // Navigate to PostJob screen
-    navigation.navigate('JobDetailS');
-  };
-  const [modalVisible, setModalVisible] = React.useState(false);
+  useEffect(() => {
+    const getToken = async () => {
+      const storedToken = await AsyncStorage.getItem('authToken');
+      setToken(storedToken);
+      setTokenChecked(true);
+    };
+    getToken();
+  }, []);
 
-  const [feed, setFeed] = React.useState(false);
   useFocusEffect(
     useCallback(() => {
       setModalVisible(false);
-
-      // On focus, close the modal
-    }, []),
+    }, [])
   );
+// useEffect(() => {
+//   const checkAuth = async () => {
+//     const storedToken = await AsyncStorage.getItem('authToken');
+//     if (!storedToken) {
+//       navigation.reset({
+//         index: 0,
+//         routes: [{ name: 'Login' }],
+//       });
+//     }
+//   };
+
+//   checkAuth();
+// }, []);
+ 
+
+  if (!tokenChecked) return null; // Optional: Replace with splash or loader
+
   return (
     <>
       <TopBar />
-      {/* <View style={styles.header}>
-        <Image
-          source={require('../assets/asset_logo.png')}
-          style={styles.logo}
-        />
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => setModalVisible(true)}>
-          <Icon name="person-outline" size={24} />
-        </TouchableOpacity>
-        <NavPopup
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-        />
-      </View> */}
       <ScrollView style={styles.container}>
         <TextInput style={styles.search} placeholder="Search" />
+
         <View style={styles.cardRow}>
-          <TouchableOpacity style={styles.cardBtn} onPress={handlePress}>
+          <TouchableOpacity
+            style={styles.cardBtn}
+            onPress={() => handleSecurePress('JobDetailS', navigation)}>
             <View style={styles.cardContent}>
               <View>
                 <Text style={styles.cardTitle}>Post a job</Text>
                 <Text style={styles.cardSubtitle}>Explore &gt;</Text>
               </View>
               <View style={styles.cardIcon}>
-                {/* Image for Post a task */}
                 <Image
-                  source={require('../assets/pickTask.png')} // Replace with your own image for Post
+                  source={require('../assets/pickTask.png')}
                   style={styles.iconImage}
                 />
               </View>
             </View>
           </TouchableOpacity>
 
-          {/* Pick a task card */}
           <TouchableOpacity
             style={styles.cardBtn}
-            onPress={() => navigation.navigate('PickJob')}>
+            onPress={() => handleSecurePress('PickJob' , navigation)}>
             <View style={styles.cardContent}>
               <View>
                 <Text style={styles.cardTitle}>Pick a Job</Text>
                 <Text style={styles.cardSubtitle}>Explore &gt;</Text>
               </View>
               <View style={styles.cardIcon}>
-                {/* Image for Pick a task */}
                 <Image
-                  source={require('../assets/postTask.png')} // Replace with your own image for Pick
+                  source={require('../assets/postTask.png')}
                   style={styles.iconImage}
                 />
               </View>
             </View>
           </TouchableOpacity>
         </View>
+
         <TouchableOpacity style={styles.recentlyPosted}>
           <View style={styles.leftSection}>
             <Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
             <Text style={styles.buttonText}>News Section</Text>
           </View>
         </TouchableOpacity>
-        {/* <FlatList
-      data={jobPosts}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={renderPost}
-      scrollEnabled={false}
-    /> */}
+
         <NewsFeed showBackButton={false} showHeading={false} limit={3} />
-        {/* <View style={styles.jobItem}>
-        <View>
-          <Text style={styles.jobTitle}>Electrician</Text>
-          <Text style={styles.jobSubText}>Another day, another project! Working on a staircase today.</Text>
-          <Text style={styles.jobSubText}>#woodworking #craftsmanship </Text>
-        </View>
-        <Image
-          source={{ uri: 'https://randomuser.me/api/portraits/men/36.jpg' }}
-          style={styles.jobAvatar}
-        />
-      </View>
-      <View style={styles.jobItem}>
-        <View>
-          <Text style={styles.jobTitle}>Electrician</Text>
-          <Text style={styles.jobSubText}>Another day, another project! Working on a staircase today.</Text>
-          <Text style={styles.jobSubText}>#woodworking #craftsmanship </Text>
-        </View>
-        <Image
-          source={{ uri: 'https://randomuser.me/api/portraits/men/37.jpg' }}
-          style={styles.jobAvatar}
-        />
-      </View> */}
-        <TouchableOpacity style={styles.exploreCard}>
+
+        <TouchableOpacity
+          style={styles.exploreCard}
+          onPress={() => handleSecurePress('NewsScreen', navigation)}>
           <Text style={styles.exploreText}>
             "Find reliable workers for construction needs"
           </Text>
-          <ExploreMoreButton
-            text={'Know More'}
-            onPress={() => navigation.navigate('NewsScreen')}
-          />{' '}
+          <ExploreMoreButton text={'Know More'} onPress={() => handleSecurePress('NewsScreen', navigation)} />
         </TouchableOpacity>
-        {/* <FlatList
-data={[...jobPosts, { id: 'explore-card' }]}
-keyExtractor={(item) => item.id}
-renderItem={({ item }) =>
-item.id === 'explore-card' ? (
-  <ExploreCard onPress={handleExploreMore} />
-) : (
-  <PostCard item={item} />
-)
-}
-contentContainerStyle={styles.list}
-/> */}
+
         <TouchableOpacity
           style={styles.recentlyPosted}
-          onPress={() => navigation.navigate('PickJob')}>
+          onPress={() => handleSecurePress('PickJob', navigation)}>
           <View style={styles.leftSection}>
             <Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
             <Text style={styles.buttonText}>Recently posted</Text>
-            <Icon
-              name="arrow-right"
-              size={16}
-              color="#fff"
-              style={styles.rightIcon}
-            />
+            <Icon name="arrow-right" size={16} color="#fff" style={styles.rightIcon} />
             <Text style={styles.moreText}>More</Text>
           </View>
         </TouchableOpacity>
-        {/* Simulated job list */}
+
+        {/* Recent jobs list */}
         <View style={styles.recentJobs}>
-          <View style={styles.jobItem}>
-            <View>
-              <Text style={styles.jobTitle}>Carpenter</Text>
-              <Text style={styles.jobSubText}>Auckland, New Zealand</Text>
-              <Text style={styles.jobSubText}>
-                Project completion by 13 Jan 2025
-              </Text>
+          {[
+            { title: 'Carpenter', city: 'Auckland', avatar: 'men/34.jpg' },
+            { title: 'Electrician', city: 'Christchurch', avatar: 'men/32.jpg' },
+            { title: 'Concrete Finisher', city: 'Queenstown', avatar: 'women/32.jpg' },
+          ].map((job, index) => (
+            <View style={styles.jobItem} key={index}>
+              <View>
+                <Text style={styles.jobTitle}>{job.title}</Text>
+                <Text style={styles.jobSubText}>{job.city}, New Zealand</Text>
+                <Text style={styles.jobSubText}>Project completion by 13 Jan 2025</Text>
+              </View>
+              <Image
+                source={{ uri: `https://randomuser.me/api/portraits/${job.avatar}` }}
+                style={styles.jobAvatar}
+              />
             </View>
-            <Image
-              source={{uri: 'https://randomuser.me/api/portraits/men/34.jpg'}}
-              style={styles.jobAvatar}
-            />
-          </View>
-
-          <View style={styles.jobItem}>
-            <View>
-              <Text style={styles.jobTitle}>Electrician</Text>
-              <Text style={styles.jobSubText}>Christchurch, New Zealand</Text>
-              <Text style={styles.jobSubText}>
-                Project completion by 13 Jan 2025
-              </Text>
-            </View>
-            <Image
-              source={{uri: 'https://randomuser.me/api/portraits/men/32.jpg'}}
-              style={styles.jobAvatar}
-            />
-          </View>
-
-          <View style={styles.jobItem}>
-            <View>
-              <Text style={styles.jobTitle}>Concrete Finisher</Text>
-              <Text style={styles.jobSubText}>Queenstown, New Zealand</Text>
-              <Text style={styles.jobSubText}>
-                Project completion by 13 Jan 2025
-              </Text>
-            </View>
-            <Image
-              source={{uri: 'https://randomuser.me/api/portraits/women/32.jpg'}}
-              style={styles.jobAvatar}
-            />
-          </View>
+          ))}
         </View>
+
         <TouchableOpacity
           style={styles.seeAll}
-          onPress={() => navigation.navigate('PickJob')}>
-          <Text style={{color: '#fff'}}>See All</Text>
+          onPress={() => handleSecurePress('PickJob', navigation)}>
+          <Text style={{ color: '#fff' }}>See All</Text>
         </TouchableOpacity>
-        {/* <FlatList
-      data={jobPosts}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={PostFeed}
-      scrollEnabled={false}
-    /> */}
+
         <PostFeed
           showBackButton={false}
           showBottomBar={false}
           showHeader={false}
           showLikeAndShare={false}
         />
-        <TouchableOpacity style={styles.exploreCard}>
+
+        <TouchableOpacity
+          style={styles.exploreCard}
+          onPress={() => handleSecurePress('Feed', navigation)}>
           <Text style={styles.exploreText}>
             "Find reliable workers for construction needs"
           </Text>
-          <ExploreMoreButton
-            text={'Explore More'}
-            onPress={() => navigation.navigate('Feed')}
-          />{' '}
-        </TouchableOpacity>{' '}
-        {/* <TouchableOpacity style={styles.exploreCard}>
-    <Text style={styles.exploreText}>
-      "Find reliable workers for construction needs"
-    </Text>
-    <Text style={styles.exploreButton}>Explore</Text>
-  </TouchableOpacity> */}
-        {/* <View style={{ height: 100 }} />
-      <BottomTabBar /> */}
-        {/* <View style={styles.bottomNav}>
-<TouchableOpacity style={styles.navItem}>
-  <Icon name="home" size={24} color="#6264A7" />
-  <Text style={styles.navLabel}>Home</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.navItem}>
-  <Icon name="event-note" size={24} color="#888" />
-  <Text style={styles.navLabel}>Booking</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.fab}>
-  <Icon name="add" size={28} color="#fff" />
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.navItem}>
-  <Icon name="chat" size={24} color="#888" />
-  <Text style={styles.navLabel}>Chat</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.navItem}>
-  <Icon name="notifications-none" size={24} color="#888" />
-  <Text style={styles.navLabel}>Notify</Text>
-</TouchableOpacity>
-</View> */}
+          <ExploreMoreButton text={'Explore More'} onPress={() => handleSecurePress('Feed', navigation)} />
+        </TouchableOpacity>
       </ScrollView>
-      <View style={{height: 100, backgroundColor: '#fff'}} />
+
+      <View style={{ height: 100, backgroundColor: '#fff' }} />
       <BottomTabBar />
+      <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
     </>
   );
 };

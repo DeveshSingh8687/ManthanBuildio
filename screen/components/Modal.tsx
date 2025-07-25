@@ -11,7 +11,7 @@ import {
   useNavigation,
 } from '@react-navigation/native';
 import {RootStackParamList} from '../../navigation/Navigation';
-import { logout } from '../config/auth';
+import { handleSecurePress, logout } from '../config/auth';
 
 export const NavPopup = ({visible, onClose}: any) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -42,7 +42,7 @@ const handleLogout = async () => {
             style={styles.navItemMenu}
             onPress={() => {
               onClose();
-              navigation.navigate('AccountScreen');
+              handleSecurePress('AccountScreen', navigation);
             }}>
             <Icon name="account-circle" type="material" size={24} />
             <Text style={styles.navText}>Profile</Text>
@@ -51,9 +51,9 @@ const handleLogout = async () => {
           {/* Jobs Option */}
           <TouchableOpacity
             style={styles.navItemMenu}
-            onPress={() => {
+           onPress={() => {
               onClose();
-              navigation.navigate('JobsSection');
+              handleSecurePress('JobsSection', navigation);
             }}>
             <Icon name="assignment" type="material" size={24} />
             <Text style={styles.navText}>Jobs</Text>
@@ -61,9 +61,9 @@ const handleLogout = async () => {
 
              <TouchableOpacity
             style={styles.navItemMenu}
-            onPress={() => {
+           onPress={() => {
               onClose();
-              navigation.navigate('MyProfile');
+              handleSecurePress('MyProfile', navigation);
             }}>
             <Icon name="person" type="material" size={24} />
             <Text style={styles.navText}>My Profile</Text>

@@ -1,189 +1,198 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   TouchableOpacity,
+  SafeAreaView,
   StyleSheet,
-  Modal,
   Alert,
+  Modal,
   ActivityIndicator,
+  TextInput,
+  ScrollView,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import TopBar from '../components/TopBar';
-import Icon from 'react-native-vector-icons/Ionicons';
-import BottomTabBar from '../components/BottomNavigaionBar';
-import {GooglePlacesAutocomplete} from 'react-native-google-places-autocomplete';
-
-// Import Geolocation from community package
 import Geolocation from '@react-native-community/geolocation';
-import MapView, {Marker} from 'react-native-maps';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MapView, { Marker } from 'react-native-maps';
+import TopBar from '../components/TopBar';
+import BottomTabBar from '../components/BottomNavigaionBar';
 
-type Props = {
-  navigation: {
-    goBack: () => void;
-  };
+import { StackNavigationProp } from '@react-navigation/stack';
+
+type ManageAddressScreenProps = {
+  navigation: StackNavigationProp<any>;
 };
 
-const ManageAddressScreen: React.FC<Props> = ({navigation}) => {
+const ManageAddressScreen = ({ navigation }: ManageAddressScreenProps) => {
   const [showAddressModal, setShowAddressModal] = useState(false);
-  const [location, setLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  const [addressForm, setAddressForm] = useState({
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: '',
+  });
 
   const handleUseCurrentLocation = () => {
     setLoadingLocation(true);
 
     Geolocation.getCurrentPosition(
       position => {
-        const {latitude, longitude} = position.coords;
-        setLocation({latitude, longitude});
+        const { latitude, longitude } = position.coords;
+        setLocation({ latitude, longitude });
         setLoadingLocation(false);
       },
       error => {
-        // Handle location permission denied or location off
+        let message = 'Unable to get location.';
         if (error.code === 1) {
-          // Permission denied
-          Alert.alert(
-            'Permission Denied',
-            'Please enable location permissions in your device settings.',
-          );
+          message = 'Please enable location permissions in settings.';
         } else if (error.code === 2) {
-          // Location unavailable (e.g. GPS off)
-          Alert.alert(
-            'Location Unavailable',
-            'Please turn on your device location services.',
-          );
+          message = 'Location unavailable. Please turn on GPS.';
         } else if (error.code === 3) {
-          // Timeout
-          Alert.alert('Timeout', 'Unable to get location. Please try again.');
-        } else {
-          Alert.alert('Error', error.message);
+          message = 'Location request timed out.';
         }
+        Alert.alert('Error', message);
         setLoadingLocation(false);
       },
-      {enableHighAccuracy: false, timeout: 15000, maximumAge: 10000},
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
     );
   };
 
-  const rows = [
-    {label: 'Manage address', onPress: () => setShowAddressModal(true)},
-  ];
+  const handleInputChange = (field: string, value: string) => {
+    setAddressForm(prev => ({ ...prev, [field]: value }));
+  };
 
-  const renderRow = (label: string, onPress: () => void) => (
-    <TouchableOpacity style={styles.addRow} onPress={onPress} key={label}>
-      <Ionicons name="add-circle-outline" size={20} color="#6264A7" />
-      <Text style={styles.addText}>Add another address</Text>
-    </TouchableOpacity>
-  );
+  const handleAddAddress = async () => {
+    const token = await AsyncStorage.getItem('authToken');
+    if (!token) {
+      Alert.alert('Auth Error', 'User not authenticated.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://4.245.1.145:4000/api/users/add_address', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(addressForm),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        Alert.alert('Success', 'Address added successfully');
+        setShowAddressModal(false);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to add address');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Network Error', 'Unable to connect to server.');
+    }
+  };
 
   return (
     <>
       <TopBar />
-
       <SafeAreaView style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#6264A7" />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-back" size={24} color="#6264A7" />
           </TouchableOpacity>
-          <Text style={styles.title}>Manage address</Text>
+          <Text style={styles.title}>Manage Address</Text>
         </View>
-        {rows.map(row => renderRow(row.label, row.onPress))}
+
+        <TouchableOpacity style={styles.addRow} onPress={() => setShowAddressModal(true)}>
+          <Icon name="add-circle-outline" size={20} color="#6264A7" />
+          <Text style={styles.addText}>Add another address</Text>
+        </TouchableOpacity>
 
         <View style={styles.divider} />
       </SafeAreaView>
 
-      {/* Modal */}
-      <Modal
-        visible={showAddressModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowAddressModal(false)}>
+      <Modal visible={showAddressModal} animationType="slide" transparent>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            {/* Close Icon */}
             <TouchableOpacity onPress={() => setShowAddressModal(false)}>
-              <Icon
-                name="chevron-down"
-                size={24}
-                color="#6264A7"
-                style={styles.modalCloseIcon}
-              />
+              <Icon name="expand-more" size={24} color="#6264A7" style={styles.modalCloseIcon} />
             </TouchableOpacity>
+
+            <ScrollView style={{ maxHeight: 400 }}>
+              <TextInput
+                placeholder="Address Line 1"
+                value={addressForm.address_line1}
+                onChangeText={text => handleInputChange('address_line1', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Address Line 2"
+                value={addressForm.address_line2}
+                onChangeText={text => handleInputChange('address_line2', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="City"
+                value={addressForm.city}
+                onChangeText={text => handleInputChange('city', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="State"
+                value={addressForm.state}
+                onChangeText={text => handleInputChange('state', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Postal Code"
+                value={addressForm.postal_code}
+                onChangeText={text => handleInputChange('postal_code', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Country"
+                value={addressForm.country}
+                onChangeText={text => handleInputChange('country', text)}
+                style={styles.input}
+              />
+
+              <TouchableOpacity style={styles.saveButton} onPress={handleAddAddress}>
+                <Text style={styles.saveButtonText}>Save Address</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
             {loadingLocation && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(255, 255, 255, 0.7)', // semi-transparent background
-                  zIndex: 1000,
-                }}>
+              <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color="#6264A7" />
-                <Text style={{color: '#6264A7', marginTop: 10, fontSize: 16}}>
-                  Fetching location...
-                </Text>
+                <Text style={{ color: '#6264A7', marginTop: 10 }}>Fetching location...</Text>
               </View>
             )}
 
-            {/* Search bar placeholder */}
-            <View style={styles.searchBar}>
-              <Ionicons
-                name="search"
-                size={16}
-                color="#7D7D93"
-                style={{marginRight: 8}}
-              />
-              <Text style={styles.searchPlaceholder}>Search address</Text>
-            </View>
-
-            {/* Use current location row */}
-            <TouchableOpacity
-              style={styles.locationRow}
-              onPress={handleUseCurrentLocation}>
-              <Ionicons name="location-outline" size={20} color="#6264A7" />
+            <TouchableOpacity style={styles.locationRow} onPress={handleUseCurrentLocation}>
+              <Icon name="my-location" size={20} color="#6264A7" />
               <Text style={styles.locationText}>Use current location</Text>
             </TouchableOpacity>
+
             {location && (
-              <View style={{height: 300, marginTop: 20}}>
+              <View style={{ height: 200, marginTop: 15 }}>
                 <MapView
-                  style={{flex: 1}}
+                  style={{ flex: 1 }}
                   initialRegion={{
                     latitude: location.latitude,
                     longitude: location.longitude,
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01,
                   }}
-                  showsUserLocation={true}>
-                  <Marker
-                    coordinate={{
-                      latitude: location.latitude,
-                      longitude: location.longitude,
-                    }}
-                  />
+                  showsUserLocation>
+                  <Marker coordinate={location} />
                 </MapView>
               </View>
             )}
-
-            <View style={styles.divider} />
-
-            <Text style={styles.poweredBy}>
-              powered by <Text style={{color: '#4285F4'}}>G</Text>
-              <Text style={{color: '#EA4335'}}>o</Text>
-              <Text style={{color: '#FBBC05'}}>o</Text>
-              <Text style={{color: '#34A853'}}>g</Text>
-              <Text style={{color: '#EA4335'}}>l</Text>
-              <Text style={{color: '#4285F4'}}>e</Text>
-            </Text>
           </View>
         </View>
       </Modal>
@@ -192,90 +201,82 @@ const ManageAddressScreen: React.FC<Props> = ({navigation}) => {
   );
 };
 
-export default ManageAddressScreen;
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
-  },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2A37',
-    marginLeft: 20,
-  },
-  addRow: {
     marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  backButton: { marginRight: 10 },
+  title: { fontSize: 20, fontWeight: '600', color: '#333' },
+  addRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 36,
+    padding: 16,
   },
-  addText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#6264A7',
-  },
+  addText: { marginLeft: 10, color: '#6264A7', fontSize: 16 },
   divider: {
     height: 1,
-    backgroundColor: '#D1D5DB',
-    marginVertical: 8,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 16,
+    marginTop: 10,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: '#00000066',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '80%',
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
     paddingBottom: 40,
   },
   modalCloseIcon: {
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  searchBar: {
-    flexDirection: 'row',
-    backgroundColor: '#E3E5F3',
-    padding: 12,
-    borderRadius: 24,
+  input: {
+    height: 48,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  saveButton: {
+    backgroundColor: '#6264A7',
+    paddingVertical: 14,
+    borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 10,
   },
-  searchPlaceholder: {
-    color: '#7D7D93',
-    fontSize: 14,
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 36,
+    marginTop: 20,
   },
   locationText: {
-    fontSize: 16,
-    color: '#6264A7',
     marginLeft: 8,
+    color: '#6264A7',
+    fontSize: 16,
   },
-  poweredBy: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#777',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0, bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
   },
 });
+
+export default ManageAddressScreen;

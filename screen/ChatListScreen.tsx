@@ -27,10 +27,6 @@ type Message = {
 
 const ChatListScreen = () => {
   const [chatId, setChatId] = useState('');
-
-
-
-
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const [users, setUsers] = React.useState<any[]>([]);
@@ -38,27 +34,40 @@ const ChatListScreen = () => {
     getUsers();
   }, []);
   const getUsers = async () => {
+    //  const token = await AsyncStorage.getItem('authToken');
     const storedChatId = (await AsyncStorage.getItem('USERID')) || '';
-    setChatId(storedChatId); // ✅ use state instead of global variable
-    console.log('chatId', storedChatId);
+    setChatId(storedChatId);
 
     const myEmail = await AsyncStorage.getItem('EMAIL');
+    const token = await AsyncStorage.getItem('authToken');
 
     try {
-      const res = await fireStore().collection('users').get();
-      // Removed: const authUsers = await firebase.auth().listUsers();
+      const response = await fetch(
+        'http://4.245.1.145:4000/api/chats/users_list',
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
 
-      // Filter out current user email
-      const filteredUsers = res.docs
-        .map(doc => {
-          const data = doc.data();
-          data.id = doc.id; // assign document ID for keyExtractor
-          return data;
-        })
-        .filter(user => user.email !== myEmail && user.email !== '');
+      const result = await response.json();
 
-      setUsers(filteredUsers);
-    } catch (error) {}
+      if (result.status && Array.isArray(result.data)) {
+        const filteredUsers = result.data.filter(
+          (user: {email: string | null}) =>
+            user.email !== myEmail && user.email !== '',
+        );
+
+        setUsers(filteredUsers);
+      } else {
+        console.error('Failed to fetch users:', result.message);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
   };
   // Subscribe to chats where current user is a participant
 
@@ -70,47 +79,45 @@ const ChatListScreen = () => {
     const imgNum = (index % 99) + 1;
     return `https://randomuser.me/api/portraits/${gender}/${imgNum}.jpg`;
   };
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [chatList, setChatList] = useState<any[]>([]);
-    const fetchChats = async () => {
-  const myUserId = await AsyncStorage.getItem('USERID');
-  const chatQuerySnapshot = await fireStore()
-    .collection('chats')
-    .where('participants', 'array-contains', myUserId)
-    .orderBy('lastMessageTime', 'desc')
-    .get();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatList, setChatList] = useState<any[]>([]);
+  const fetchChats = async () => {
+    const myUserId = await AsyncStorage.getItem('USERID');
+    const chatQuerySnapshot = await fireStore()
+      .collection('chats')
+      .where('participants', 'array-contains', myUserId)
+      .orderBy('lastMessageTime', 'desc')
+      .get();
 
-  const chats = chatQuerySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+    const chats = chatQuerySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-  setChatList(chats);
-};
+    setChatList(chats);
+  };
   const chatIdA = chatId || 'defaultChatId'; // Fallback to a default chat ID if not set
-   useEffect(() => {
+  useEffect(() => {
     const unsubscribe = fireStore()
       .collection('chats')
       .doc(chatIdA)
       .collection('messages')
       .orderBy('createdAt', 'asc')
       .onSnapshot(snapshot => {
-        const fetchedMessages = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...(doc.data() as Omit<Message, 'id'>),
-          }))
-          
+        const fetchedMessages = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as Omit<Message, 'id'>),
+        }));
+
         console.log('Fetched messages :', fetchedMessages);
         setMessages(fetchedMessages);
         // 👇 This will ensure scrolling works when new messages arrive
-
       });
 
     return unsubscribe;
   }, [chatIdA]);
-  
-  console.log(messages)
+
+  console.log(messages);
   const renderItem = ({item, index}: {item: any; index: number}) => (
     <TouchableOpacity
       style={styles.chatItem}
@@ -129,10 +136,10 @@ const ChatListScreen = () => {
       <View style={styles.chatInfo}>
         <View style={styles.chatHeader}>
           <Text style={styles.chatName}>
-            {item.firstName && item.lastName
-              ? `${item.firstName} ${item.lastName}`
-              : item.name}
-          </Text>{' '}
+            {item.first_name && item.last_name
+              ? `${item.first_name} ${item.last_name}`
+              : item.email}
+          </Text>
           <Text style={styles.chatTime}>{item.lastMessageTime}</Text>
         </View>
         <View style={styles.chatFooter}>

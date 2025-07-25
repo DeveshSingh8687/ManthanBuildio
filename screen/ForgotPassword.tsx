@@ -19,49 +19,49 @@ import { RootStackParamList } from '../navigation/Navigation';
 const ForgetPassword = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!email.trim()) {
       Alert.alert('Validation Error', 'Please enter a valid email address.');
       return;
     }
 
-    const payload = {
-      email: email.trim(),
-    };
+    try {
+      setLoading(true);
+      const response = await fetch('http://4.245.1.145:4000/api/auth/forgot_password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim() }),
+      });
 
-    // Simulate sending payload to backend
-   Alert.alert('Sending payload:', JSON.stringify(payload));
+      const result = await response.json();
+      console.log('Response:', result);
 
-    // You can replace the above with an actual API call like:
-    // fetch('https://your-backend.com/api/reset-password', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify(payload),
-    // })
-    //   .then(response => response.json())
-    //   .then(data => {
-    //     console.log('Success:', data);
-    //     // Optionally navigate or show success message
-    //   })
-    //   .catch(error => {
-    //     console.error('Error:', error);
-    //   });
+      if (response.ok && result.status) {
+        Alert.alert('Success', 'OTP sent successfully');
+      } else {
+        Alert.alert('Failed', result.message || 'Something went wrong');
+      }
+    } catch (error) {
+      console.error('Error sending reset password request:', error);
+      Alert.alert('Error', 'Failed to send request. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-    >
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView
           contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={28} color="#333" />
           </TouchableOpacity>
@@ -81,14 +81,15 @@ const ForgetPassword = () => {
             To reset your password, you need your email that can be authenticated
           </Text>
 
-          <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword}>
-            <Text style={styles.resetButtonText}>Reset password</Text>
+          <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
+            <Text style={styles.resetButtonText}>
+              {loading ? 'Sending...' : 'Reset password'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.backToLoginButton}
-            onPress={() => navigation.navigate('Login')}
-          >
+            onPress={() => navigation.navigate('Login')}>
             <Text style={styles.backButtonText}>Back to login</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -98,7 +99,6 @@ const ForgetPassword = () => {
 };
 
 export default ForgetPassword;
-
 
 const styles = StyleSheet.create({
   container: {

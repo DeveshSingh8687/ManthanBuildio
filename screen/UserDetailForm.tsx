@@ -10,6 +10,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Icon} from 'react-native-elements';
 import {
@@ -24,6 +26,7 @@ import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {PermissionsAndroid} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AddJobScreen = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -31,6 +34,7 @@ const AddJobScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleCamera = async () => {
     if (Platform.OS === 'android') {
@@ -63,12 +67,52 @@ const AddJobScreen = () => {
       }
     });
   };
+  // const handleSubmit = async () => {
+  //   if (!validateForm()) return;
 
+  //   try {
+  //     const token = await AsyncStorage.getItem('YourAuthTokenKey'); // update with your key
+
+  //     const form = new FormData();
+
+  //     form.append('first_name', formData['Name']);
+  //     form.append('last_name', formData['Name']); // or add a Last Name field
+  //     form.append('phone_number', formData['Phone Number']);
+
+  //     if (selectedImage) {
+  //       const fileName = selectedImage.split('/').pop();
+  //       const fileType = fileName?.split('.').pop();
+
+  //       form.append('profile_image', {
+  //         uri: selectedImage,
+  //         type: `image/${fileType}`,
+  //         name: fileName || 'profile.jpg',
+  //       });
+  //     }
+
+  //     const response = await axios.post(
+  //       'http://4.245.1.145:4000/api/users/update',
+  //       form,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //           'Content-Type': 'multipart/form-data',
+  //         },
+  //       }
+  //     );
+
+  //     console.log('Profile updated:', response.data);
+  //     alert('Profile successfully updated!');
+  //   } catch (error) {
+  //     console.error('Update error:', error.message);
+  //     alert('Failed to update profile');
+  //   }
+  // };
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const fields = [
     'Name',
-    'Email',
+    'Last Name',
     'Phone Number',
     'Job Type',
     'Description',
@@ -113,11 +157,66 @@ const AddJobScreen = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) return;
-    // submit logic
-    console.log('Form submitted:', formData);
-  };
+  // const handleSubmit = () => {
+  //   if (!validateForm()) return;
+  //   // submit logic
+  //   console.log('Form submitted:', formData);
+  // };
+
+  const handleSubmit = async () => {
+    const token = await AsyncStorage.getItem('authToken');
+    const uri = selectedImage;
+
+  if (!uri) {
+    Alert.alert('Please select an image.');
+    return;
+  }
+    setLoading(true);
+
+  const fileName = uri.split('/').pop() || 'profile.jpg';
+  const fileType = fileName.split('.').pop();
+  console.log('File Name:', fileName);
+  console.log('File Type:', fileType);
+
+  const form = new FormData();
+  form.append('first_name', formData['Name'] || '');
+  form.append('last_name', formData['Last Name'] || '');
+  // console.log(form.append('phone_number', Number(formData['Phone Number'] || 0)));
+form.append('profile_picture', {
+  uri: selectedImage,
+  name: fileName || `photo.jpg`,         // must not be undefined
+  type: `image/${fileType || 'jpg'}`,    // should be like image/jpg or image/jpeg
+});
+
+  try {
+    const response = await fetch('http://4.245.1.145:4000/api/users/update', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // DO NOT manually set Content-Type for FormData in fetch — let RN handle it
+      },
+      body: form,
+    });
+
+    const result = await response.json();
+    setLoading(false);
+    console.log('Upload response:', result);
+    navigation.navigate('AccountScreen');
+
+ if (response.ok) {
+      Alert.alert('Profile updated successfully!');
+      navigation.navigate('AccountScreen');
+    } else {
+      Alert.alert(`Failed to update: ${result.message || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    Alert.alert('Upload failed. Try again.');
+  } finally {
+    setLoading(false); // Always stop loading
+  }
+};
+
 
   useFocusEffect(
     useCallback(() => {
@@ -129,6 +228,12 @@ const AddJobScreen = () => {
     setSelectedImage(null);
   };
 
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#6264A7" />
+                <Text style={{ color: '#6264A7', marginTop: 10 }}>Fetching location...</Text>
+              </View>
+            )}
   return (
     <>
       <TopBar />
@@ -146,12 +251,10 @@ const AddJobScreen = () => {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
         <ScrollView
           contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           {fields.map((label, index) => {
             const multiline = isMultiline(label);
             return (
@@ -190,14 +293,12 @@ const AddJobScreen = () => {
             <View style={styles.imageRow}>
               <TouchableOpacity
                 onPress={handleCamera}
-                style={styles.imageButton}
-              >
+                style={styles.imageButton}>
                 <Icon name="camera-alt" size={22} color="white" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleGallery}
-                style={styles.imageButton}
-              >
+                style={styles.imageButton}>
                 <Icon name="photo-library" size={22} color="white" />
               </TouchableOpacity>
             </View>
@@ -323,6 +424,14 @@ const styles = StyleSheet.create({
     borderColor: 'red',
     borderWidth: 1,
     borderRadius: 8,
+  },
+   loadingOverlay: {
+    position: 'absolute',
+    top: 0, bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
   },
 });
 
