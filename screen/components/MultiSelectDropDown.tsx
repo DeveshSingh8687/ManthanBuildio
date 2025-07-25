@@ -1,56 +1,89 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const jobCategories = [
-  {
-    title: 'Building & Construction',
-    items: ['New Builds', 'Renovations', 'Extensions', 'Retaining Walls', 'Decking', 'Pergolas', 'Foundations'],
-  },
-  {
-    title: 'Plumbing',
-    items: ['General Plumbing', 'Drainlaying', 'Gasfitting', 'Hot Water Cylinder', 'Bathroom Renovation', 'Stormwater Management'],
-  },
-  {
-    title: 'Electrical',
-    items: ['General Electrical', 'Lighting Installation', 'Power Points', 'Switchboard Upgrade', 'EV Charger Installation', 'Solar Panel Installation'],
-  },
-];
+// Types
+type JobItem = { id: number; name: string };
+type JobCategory = { title: string; items: JobItem[] };
 
-const CustomJobSelector = () => {
-  const [jobTypes, setJobTypes] = useState<string[]>([]);
+interface Props {
+  onSelectionChange: (selectedJobIds: number[]) => void;
+}
+
+const CustomJobSelector = ({ onSelectionChange }: Props) => {
+  const [jobCategories, setJobCategories] = useState<JobCategory[]>([]);
+  const [selectedJobs, setSelectedJobs] = useState<JobItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(''); // NEW
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const handleItemToggle = (item: string) => {
-    if (jobTypes.includes(item)) {
-      setJobTypes(jobTypes.filter(i => i !== item));
-    } else {
-      setJobTypes([...jobTypes, item]);
-    }
+  useEffect(() => {
+    const fetchJobTypes = async () => {
+      try {
+        const response = await fetch('https://buildio.co.nz/api/common/job_types_list');
+        const json = await response.json();
+        const categories: JobCategory[] = json.data.services.map((cat: any) => ({
+          title: cat.category,
+          items: cat.subcategories.map((sub: any) => ({
+            id: sub.id,
+            name: sub.name,
+          })),
+        }));
+        setJobCategories(categories);
+      } catch (err) {
+        console.error('Failed to fetch job types:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobTypes();
+  }, []);
+
+  const handleItemToggle = (item: JobItem) => {
+    const isSelected = selectedJobs.some(job => job.id === item.id);
+    const updated = isSelected
+      ? selectedJobs.filter(job => job.id !== item.id)
+      : [...selectedJobs, item];
+
+    setSelectedJobs(updated);
+    onSelectionChange(updated.map(job => job.id));
   };
 
-  const filteredCategories = jobCategories.map(category => ({
-    ...category,
-    items: category.items.filter(item => item.toLowerCase().includes(searchQuery.toLowerCase())), // NEW
-  })).filter(category => category.items.length > 0); // Remove empty sections
+  const filteredCategories = jobCategories
+    .map(category => ({
+      ...category,
+      items: category.items.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    }))
+    .filter(category => category.items.length > 0);
 
   return (
     <View style={styles.container}>
-      {/* Dropdown Button */}
       <TouchableOpacity style={styles.dropdownButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.dropdownButtonText}>
-          {jobTypes.length > 0 ? `${jobTypes.length} Job(s) Selected` : 'Select Jobs'}
+          {selectedJobs.length > 0
+            ? `${selectedJobs.length} Job(s) Selected`
+            : 'Select Jobs'}
         </Text>
         <Ionicons name="chevron-down" size={20} color="#333" />
       </TouchableOpacity>
 
-      {/* Selected Jobs as Chips */}
       <View style={styles.selectedItemsContainer}>
-        {jobTypes.length > 0 ? (
-          jobTypes.map((item, index) => (
+        {selectedJobs.length > 0 ? (
+          selectedJobs.map((item, index) => (
             <View key={index} style={styles.chip}>
-              <Text style={styles.chipText}>{item}</Text>
+              <Text style={styles.chipText}>{item.name}</Text>
             </View>
           ))
         ) : (
@@ -58,51 +91,49 @@ const CustomJobSelector = () => {
         )}
       </View>
 
-      {/* Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-      >
+      <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Search Input */}
             <TextInput
               placeholder="Search jobs..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              style={styles.searchInput} // NEW
+              style={styles.searchInput}
             />
 
-            <ScrollView>
-              {filteredCategories.length > 0 ? (
-                filteredCategories.map((category, idx) => (
-                  <View key={idx}>
-                    <Text style={styles.categoryTitle}>{category.title}</Text>
-                    {category.items.map((item, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.itemContainer}
-                        onPress={() => handleItemToggle(item)}
-                      >
-                        <Text style={styles.itemText}>• {item}</Text>
-                        {jobTypes.includes(item) && (
-                          <Ionicons name="checkmark-circle" size={20} color="#6264A7" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noResultsText}>No jobs found.</Text> // NEW
-              )}
-            </ScrollView>
+            {loading ? (
+              <ActivityIndicator size="large" color="#000" />
+            ) : (
+              <ScrollView>
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category, idx) => (
+                    <View key={idx}>
+                      <Text style={styles.categoryTitle}>{category.title}</Text>
+                      {category.items.map((item, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.itemContainer}
+                          onPress={() => handleItemToggle(item)}
+                        >
+                          <Text style={styles.itemText}>• {item.name}</Text>
+                          {selectedJobs.some(job => job.id === item.id) && (
+                            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.noResultsText}>No jobs found.</Text>
+                )}
+              </ScrollView>
+            )}
 
             <TouchableOpacity
               style={styles.doneButton}
               onPress={() => {
                 setModalVisible(false);
-                setSearchQuery(''); // Clear search on Done
+                setSearchQuery('');
               }}
             >
               <Text style={styles.doneButtonText}>Done</Text>
@@ -113,6 +144,7 @@ const CustomJobSelector = () => {
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

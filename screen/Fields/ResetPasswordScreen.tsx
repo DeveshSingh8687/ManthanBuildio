@@ -41,7 +41,7 @@ export default function ResetPassword() {
       const token = await AsyncStorage.getItem('authToken');
 
       const response = await fetch(
-        'http://4.245.1.145:4000/api/users/update_password',
+        'https://buildio.co.nz/api/users/update_password',
         {
           method: 'POST',
           headers: {

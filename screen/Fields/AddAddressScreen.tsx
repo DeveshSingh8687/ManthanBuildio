@@ -75,7 +75,7 @@ const ManageAddressScreen = ({ navigation }: ManageAddressScreenProps) => {
     }
 
     try {
-      const response = await fetch('http://4.245.1.145:4000/api/users/add_address', {
+      const response = await fetch('https://buildio.co.nz/api/users/add_address', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

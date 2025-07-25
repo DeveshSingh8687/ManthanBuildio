@@ -43,7 +43,7 @@ const ChatListScreen = () => {
 
     try {
       const response = await fetch(
-        'http://4.245.1.145:4000/api/chats/users_list',
+        'https://buildio.co.nz/api/chats/users_list',
         {
           method: 'GET',
           headers: {

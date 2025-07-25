@@ -77,7 +77,7 @@ const registerUser = async () => {
   const userId = uuid.v4() as string;
 
     try {
-    const response = await fetch('http://4.245.1.145:4000/api/auth/sign_up', {
+    const response = await fetch('https://buildio.co.nz/api/auth/sign_up', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

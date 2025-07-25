@@ -40,7 +40,7 @@ export const socialLoginAPI = async ({
 }) => {
   try {
     const response = await fetch(
-      'http://4.245.1.145:4000/api/auth/social_login',
+      'https://buildio.co.nz/api/auth/social_login',
       {
         method: 'POST',
         headers: {

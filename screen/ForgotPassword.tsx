@@ -29,7 +29,7 @@ const ForgetPassword = () => {
 
     try {
       setLoading(true);
-      const response = await fetch('http://4.245.1.145:4000/api/auth/forgot_password', {
+      const response = await fetch('https://buildio.co.nz/api/auth/forgot_password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

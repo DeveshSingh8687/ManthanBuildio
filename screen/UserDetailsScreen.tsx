@@ -35,6 +35,7 @@ const AccountScreen = () => {
   type UserData = {
     first_name: string;
     last_name: string;
+    profile_picture?: string;
     // add other fields as needed
   };
 
@@ -52,7 +53,7 @@ const AccountScreen = () => {
       }
 
       const response = await fetch(
-        'http://4.245.1.145:4000/api/users/my_profile',
+        'https://buildio.co.nz/api/users/my_profile',
         {
           method: 'GET',
           headers: {
@@ -98,7 +99,9 @@ const AccountScreen = () => {
   };
 
   const handleEditPress = () => {
-    navigation.navigate('UserDetailScreen');
+    navigation.navigate('UserDetailScreen', {
+      userData: userData,
+    } as any);
   };
 
   const handleLogout = () => {
@@ -148,7 +151,7 @@ const AccountScreen = () => {
             <View style={styles.profileSection}>
               <View style={styles.profileImageWrapper}>
                 <Image
-                  source={{uri: profileData.profilePhoto}}
+                  source={{uri: userData?.profile_picture}}
                   style={styles.profileImage}
                 />
                 <TouchableOpacity
