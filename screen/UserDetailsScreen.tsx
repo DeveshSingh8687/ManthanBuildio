@@ -18,7 +18,7 @@ import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logout } from './config/auth';
+import {logout} from './config/auth';
 
 const profileData = {
   name: 'John Doe',
@@ -37,6 +37,7 @@ const AccountScreen = () => {
     first_name: string;
     last_name: string;
     profile_picture?: string;
+    social_media_provider?: string;
     // add other fields as needed
   };
 
@@ -63,12 +64,9 @@ const AccountScreen = () => {
           },
         },
       );
-
+      setLoading(true);
       const contentType = response.headers.get('content-type');
       const text = await response.text();
-
-      console.log('Status:', response.status);
-      console.log('Response:', text);
 
       if (contentType && contentType.includes('application/json')) {
         const json = JSON.parse(text);
@@ -91,10 +89,9 @@ const AccountScreen = () => {
   useEffect(() => {
     fetchUserProfile();
   }, []);
-  console.log(userData, 'user');
 
   if (loading) return <ActivityIndicator style={{flex: 1}} size="large" />;
-
+  const socialMediaCheck = userData?.social_media_provider;
   const handleBackPress = () => {
     navigation.goBack();
   };
@@ -181,13 +178,12 @@ const AccountScreen = () => {
             {renderRow('About Buildio', () =>
               navigation.navigate('AboutUsScreen'),
             )}
-            {renderRow('Reset Password', () =>
-              navigation.navigate('ResetPassword'),
-            )}
+            {userData?.social_media_provider === null &&
+              renderRow('Reset Password', () =>
+                navigation.navigate('ResetPassword'),
+              )}
 
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={logout}>
+            <TouchableOpacity style={styles.logoutButton} onPress={logout}>
               <Icon name="log-out-outline" size={20} color="#fff" />
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>

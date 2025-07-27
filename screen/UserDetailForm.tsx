@@ -36,7 +36,7 @@ const AddJobScreen = ({
   route: RouteProp<RootStackParamList, keyof RootStackParamList>;
 }) => {
   const userData = (route.params as any)?.userData;
-  console.log(userData, 'userdata'); // If you need userData, use: const userData = (route.params as any)?.userData;
+  // console.log(userData, 'userdata'); // If you need userData, use: const userData = (route.params as any)?.userData;
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [modalVisible, setModalVisible] = useState(false);
@@ -44,29 +44,26 @@ const AddJobScreen = ({
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<any[]>([]);
-  const getUserId = async () => {
-    const userIdStr = (await AsyncStorage.getItem('USERID')) || '';
-    return userIdStr ? parseInt(userIdStr, 10) : null;
-  };
 
-  const prepareUserJobTypes = async (selectedJobs: any) => {
-    const userId = await getUserId();
-    // const timestamp = new Date().toISOString();
-    console.log('User ID:', userId);
 
-    if (!userId) {
-      throw new Error('User ID not found in AsyncStorage');
-    }
+  // const prepareUserJobTypes = async (selectedJobs: any) => {
+  //   const userId = await getUserId();
+  //   // const timestamp = new Date().toISOString();
+  //   console.log('User ID:', userId);
 
-    const userJobTypes = selectedJobs.map((job: {id: any}) => ({
-      user_id: userId,
-      id: job.id,
-      // created_at: timestamp,
-      // updated_at: timestamp,
-    }));
+  //   if (!userId) {
+  //     throw new Error('User ID not found in AsyncStorage');
+  //   }
 
-    return userJobTypes;
-  };
+  //   const userJobTypes = selectedJobs.map((job: {id: any}) => ({
+  //     user_id: userId,
+  //     id: job.id,
+  //     // created_at: timestamp,
+  //     // updated_at: timestamp,
+  //   }));
+
+  //   return userJobTypes;
+  // };
 
   const handleCamera = async () => {
     if (Platform.OS === 'android') {
@@ -109,7 +106,7 @@ const AddJobScreen = ({
   useEffect(() => {
     if (userData) {
       setFormData({
-        Name: userData.first_name || '',
+         Name: userData.first_name || '',
         'Last Name': userData.last_name || '',
         'Phone Number': userData.phone_number || '',
         'about': userData.about || 'this is about',
@@ -240,7 +237,7 @@ const handleInputChange = (label: string, value: string) => {
     if (!validateForm()) return;
     const token = await AsyncStorage.getItem('authToken');
     const uri = selectedImage;
-
+console.log(token, 'token');
     if (!uri) {
       Alert.alert('Please select an image.');
       return;
@@ -250,8 +247,8 @@ const handleInputChange = (label: string, value: string) => {
     const fileName = uri.split('/').pop() || 'profile.jpg';
     const fileType = fileName.split('.').pop();
     // const jobTypesPayload = selectedJobs?.map(id => ({job_type_id: id}));
-    const userJobTypesPayload = await prepareUserJobTypes(selectedJobs);
-    console.log('User Job Types Payload:', selectedJobs);
+    // const userJobTypesPayload = await prepareUserJobTypes(selectedJobs);
+    // console.log('User Job Types Payload:', selectedJobs);
 
     const form = new FormData();
     form.append('first_name', formData['Name'] || '');
@@ -317,6 +314,14 @@ const handleInputChange = (label: string, value: string) => {
   }
   return (
     <>
+    {loading && (
+  <View style={styles.loadingOverlay}>
+    <ActivityIndicator size="large" color="#6264A7" />
+    <Text style={{color: '#6264A7', marginTop: 10}}>
+      Updating profile...
+    </Text>
+  </View>
+)}
       <TopBar />
       <View style={styles.header}>
         <View style={styles.leftSection}>

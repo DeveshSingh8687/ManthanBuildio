@@ -14,10 +14,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import {
-  NavigationProp,
-  useNavigation,
-} from '@react-navigation/native';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import {
   getAuth,
@@ -30,6 +27,7 @@ import {_signInWithGoogle} from './config/auth';
 import fireStore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useEffect} from 'react';
+import CustomModal from './components/CustomModal';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -41,6 +39,8 @@ export default function LoginScreen() {
   >(null);
   const [rememberMe, setRememberMe] = useState(false);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
   function handleAuthStateChanged(
     user: import('@react-native-firebase/auth').FirebaseAuthTypes.User | null,
@@ -53,10 +53,6 @@ export default function LoginScreen() {
     return subscriber; // unsubscribe on unmount
   }, []);
   // const handleLogin = () => {
-  //   if (!email || !password) {
-  //     Alert.alert('Error', 'Please enter both email and password');
-  //     return;
-  //   }
 
   //   fireStore()
   //     .collection('users')
@@ -82,7 +78,7 @@ export default function LoginScreen() {
   //       Alert.alert('Error', 'Login failed. Please try again.');
   //     });
   // };
-    const goToNext = async (name: any, email: any, userId: string, uid: any) => {
+  const goToNext = async (name: any, email: any, userId: string, uid: any) => {
     await AsyncStorage.setItem('USERID', userId);
     await AsyncStorage.setItem('UID', uid);
     await AsyncStorage.setItem('NAME', name);
@@ -90,52 +86,60 @@ export default function LoginScreen() {
     navigation.navigate('HomeScreen');
   };
 
-const handleSignIn = async () => {
-  try {
-    Alert.alert(email, 'email');
-    
-    const response = await fetch('https://buildio.co.nz/api/auth/sign_in', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-      }),
-    });
-
-    if (response.status === 200) {
-      const data = await response.json();
-      const token = data.data.token;
-      const firstName = data.data.user.first_name;
-      const lastName = data.data.user.last_name;
-      const userId = data.data.user.id; // assuming `id` is user ID
-      const uid = data.data.user.uid || ''; // fallback if missing
-
-      // Save auth token and user name separately
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('firstName', firstName || '');
-      if (lastName) {
-        await AsyncStorage.setItem('lastName', lastName);
-      } else {
-        await AsyncStorage.removeItem('lastName');
-      }
-
-      // ✅ Reuse helper to store info and navigate
-      await goToNext(`${firstName} ${lastName || ''}`, email, userId.toString(), uid.toString());
-      
-    } else {
-      const errorData = await response.json();
-      console.error('Login failed:', errorData);
-      Alert.alert('Login Failed', errorData.message || 'Invalid credentials');
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      setModalMessage('Please enter both email and password');
+      setModalVisible(true);
+      return;
     }
-  } catch (error) {
-    console.error('Error:', error);
-    // Alert.alert('Error', JSON.stringify(error));
-  }
-};
+    try {
+      const response = await fetch('https://buildio.co.nz/api/auth/sign_in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      if (response.status === 200) {
+        const data = await response.json();
+        const token = data.data.token;
+        const firstName = data.data.user.first_name;
+        const lastName = data.data.user.last_name;
+        const userId = data.data.user.id; // assuming `id` is user ID
+        const uid = data.data.user.uid || ''; // fallback if missing
+
+        // Save auth token and user name separately
+        await AsyncStorage.setItem('authToken', token);
+        await AsyncStorage.setItem('firstName', firstName || '');
+        if (lastName) {
+          await AsyncStorage.setItem('lastName', lastName);
+        } else {
+          await AsyncStorage.removeItem('lastName');
+        }
+
+        // ✅ Reuse helper to store info and navigate
+        await goToNext(
+          `${firstName} ${lastName || ''}`,
+          email,
+          userId.toString(),
+          uid.toString(),
+        );
+      } else {
+        const errorData = await response.json();
+        console.error('Login failed:', errorData);
+        setModalMessage('Something went wrong. Please try again.');
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      // Alert.alert('Error', JSON.stringify(error));
+    }
+  };
 
   async function onGoogleButtonPress() {
     _signInWithGoogle(navigation);
@@ -176,102 +180,100 @@ const handleSignIn = async () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{flex: 1}}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContentContainer}
-          keyboardShouldPersistTaps="handled">
-          {/* Back Arrow */}
-          {/* <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              navigation.goBack();
-            }}>
-            <Icon name="arrow-back" size={28} color="#333" />
-          </TouchableOpacity> */}
-          <Text style={styles.title}>Login Your Account</Text>
-          {/* Email Input */}
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Your Email"
-            placeholderTextColor="#999"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-          {/* Password Input with Toggle */}
-          <View style={styles.passwordContainer}>
+    <><CustomModal
+      visible={modalVisible}
+      message={modalMessage}
+      onClose={() => setModalVisible(false)} title={''} buttonText={'Try Again'} /><KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={undefined}
+        keyboardVerticalOffset={0}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContentContainer}
+            keyboardShouldPersistTaps="handled">
+            {/* Back Arrow */}
+            {/* <TouchableOpacity
+      style={styles.backButton}
+      onPress={() => {
+        navigation.goBack();
+      }}>
+      <Icon name="arrow-back" size={28} color="#333" />
+    </TouchableOpacity> */}
+            <Text style={styles.title}>Login Your Account</Text>
+            {/* Email Input */}
             <TextInput
-              style={styles.passwordInput}
-              placeholder="Password"
+              style={styles.input}
+              placeholder="Enter Your Email"
               placeholderTextColor="#999"
-              secureTextEntry={!passwordVisible}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TouchableOpacity
-              onPress={() => setPasswordVisible(!passwordVisible)}>
-              <Icon
-                name={passwordVisible ? 'visibility' : 'visibility-off'}
-                size={20}
-                color="#999"
-              />
-            </TouchableOpacity>
-          </View>
-          {/* Login Button */}
-          <TouchableOpacity style={styles.loginButton} onPress={handleSignIn}>
-            <Text style={styles.loginButtonText}>Login</Text>
-          </TouchableOpacity>
-          {/* Remember Me + Forgot Password */}
-          <View style={styles.optionsContainer}>
-            <View style={styles.checkboxContainer}>
-              {/* You can use CheckBox from @react-native-community/checkbox */}
-              {/* <CheckBox value={rememberMe} onValueChange={setRememberMe} /> */}
-              <Text style={styles.checkboxLabel}></Text>
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail} />
+            {/* Password Input with Toggle */}
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password"
+                placeholderTextColor="#999"
+                secureTextEntry={!passwordVisible}
+                value={password}
+                onChangeText={setPassword} />
+              <TouchableOpacity
+                onPress={() => setPasswordVisible(!passwordVisible)}>
+                <Icon
+                  name={passwordVisible ? 'visibility' : 'visibility-off'}
+                  size={20}
+                  color="#999" />
+              </TouchableOpacity>
             </View>
+            {/* Login Button */}
+            <TouchableOpacity style={styles.loginButton} onPress={handleSignIn}>
+              <Text style={styles.loginButtonText}>Login</Text>
+            </TouchableOpacity>
+            {/* Remember Me + Forgot Password */}
+            <View style={styles.optionsContainer}>
+              <View style={styles.checkboxContainer}>
+                {/* You can use CheckBox from @react-native-community/checkbox */}
+                {/* <CheckBox value={rememberMe} onValueChange={setRememberMe} /> */}
+                <Text style={styles.checkboxLabel}></Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword')}>
+                <Text style={styles.forgotText}> Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Sign up */}
+            <View style={styles.signUpContainer}>
+              <Text style={{ color: '#999' }}>Create New Account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                <Text style={styles.signUpText}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Divider */}
+            <Text style={styles.orText}>OR</Text>
+            {/* Social Login Buttons */}
             <TouchableOpacity
-              onPress={() => navigation.navigate('ForgotPassword')}>
-              <Text style={styles.forgotText}> Forgot Password?</Text>
+              style={styles.socialButton}
+              onPress={onGoogleButtonPress}>
+              <FontAwesome
+                name="google"
+                size={20}
+                color="#EA4335"
+                style={styles.socialIcon} />
+              <Text style={styles.socialText}>Sign up with Google</Text>
             </TouchableOpacity>
-          </View>
-          {/* Sign up */}
-          <View style={styles.signUpContainer}>
-            <Text style={{color: '#999'}}>Create New Account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.signUpText}>Sign up</Text>
+            <TouchableOpacity
+              style={styles.socialButton}
+              onPress={onFacebookButtonPress}>
+              <FontAwesome
+                name="facebook"
+                size={20}
+                color="#3b5998"
+                style={styles.socialIcon} />
+              <Text style={styles.socialText}>Sign up with Facebook</Text>
             </TouchableOpacity>
-          </View>
-          {/* Divider */}
-          <Text style={styles.orText}>OR</Text>
-          {/* Social Login Buttons */}
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={onGoogleButtonPress}>
-            <FontAwesome
-              name="google"
-              size={20}
-              color="#EA4335"
-              style={styles.socialIcon}
-            />
-            <Text style={styles.socialText}>Sign up with Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={onFacebookButtonPress}>
-            <FontAwesome
-              name="facebook"
-              size={20}
-              color="#3b5998"
-              style={styles.socialIcon}
-            />
-            <Text style={styles.socialText}>Sign up with Facebook</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView></>
   );
 }
 

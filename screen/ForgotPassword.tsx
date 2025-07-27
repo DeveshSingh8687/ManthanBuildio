@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,13 @@ import {
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { NavigationProp, useNavigation } from '@react-navigation/core';
-import { RootStackParamList } from '../navigation/Navigation';
+import {NavigationProp, useNavigation} from '@react-navigation/core';
+export type RootStackParamList = {
+  ForgetPassword: undefined;
+  Login: undefined;
+  OtpVerification: {email: string}; // ✅ Add this
+  // Add other routes if needed
+};
 
 const ForgetPassword = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -32,19 +37,22 @@ const ForgetPassword = () => {
 
     try {
       setLoading(true);
-      const response = await fetch('https://buildio.co.nz/api/auth/forgot_password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        'https://buildio.co.nz/api/auth/forgot_password',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({email: email.trim()}),
         },
-        body: JSON.stringify({ email: email.trim() }),
-      });
+      );
 
       const result = await response.json();
       console.log('Response:', result);
 
       if (response.ok && result.status) {
-        setOtpModalVisible(true);
+        navigation.navigate('OtpVerification', {email: email.trim()});
       } else {
         Alert.alert('Failed', result.message || 'Something went wrong');
       }
@@ -58,16 +66,17 @@ const ForgetPassword = () => {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{flex: 1}}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
-          
           {!otpModalVisible && (
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
               <Icon name="arrow-back" size={28} color="#333" />
             </TouchableOpacity>
           )}
@@ -84,10 +93,14 @@ const ForgetPassword = () => {
           />
 
           <Text style={styles.infoText}>
-            To reset your password, you need your email that can be authenticated
+            To reset your password, you need your email that can be
+            authenticated
           </Text>
 
-          <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword} disabled={loading}>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleResetPassword}
+            disabled={loading}>
             <Text style={styles.resetButtonText}>
               {loading ? 'Sending...' : 'Send Otp'}
             </Text>
@@ -102,7 +115,7 @@ const ForgetPassword = () => {
       </TouchableWithoutFeedback>
 
       {/* OTP Modal */}
-      <Modal
+      {/* <Modal
         visible={otpModalVisible}
         transparent
         animationType="fade"
@@ -131,7 +144,7 @@ const ForgetPassword = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
     </KeyboardAvoidingView>
   );
 };

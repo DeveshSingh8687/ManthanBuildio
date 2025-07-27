@@ -29,6 +29,7 @@ import ChatListScreen from '../screen/ChatListScreen';
 import ChatDetailScreen from '../screen/ChatDetailScreen';
 import ResetPassword from '../screen/Fields/ResetPasswordScreen';
 import MyProfile from '../screen/MyProfileScreen';
+import OtpVerification from '../screen/OtpVerifyScreen';
 const Stack = createNativeStackNavigator();
 export type RootStackParamList = {
 HomeScreen: undefined
@@ -99,6 +100,7 @@ export default function Navigation() {
           <Stack.Screen name="ChatDetailScreen" component={ChatDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} options={{ headerShown: false }} />
           <Stack.Screen name="MyProfile" component={MyProfile} options={{ headerShown: false }} />
+          <Stack.Screen name="OtpVerification" component={OtpVerification} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     );
