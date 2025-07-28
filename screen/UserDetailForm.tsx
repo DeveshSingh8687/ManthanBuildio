@@ -36,7 +36,7 @@ const AddJobScreen = ({
   route: RouteProp<RootStackParamList, keyof RootStackParamList>;
 }) => {
   const userData = (route.params as any)?.userData;
-  // console.log(userData, 'userdata'); // If you need userData, use: const userData = (route.params as any)?.userData;
+  console.log(userData, 'userdata'); // If you need userData, use: const userData = (route.params as any)?.userData;
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [modalVisible, setModalVisible] = useState(false);
@@ -109,8 +109,8 @@ const AddJobScreen = ({
          Name: userData.first_name || '',
         'Last Name': userData.last_name || '',
         'Phone Number': userData.phone_number || '',
-        'about': userData.about || 'this is about',
-        'Experience': userData.experience || '',
+        'about': userData.about || '',
+        Experience: userData?.experience || '',
         Email: userData.email || '',
         'Job Type': userData.user_job_types?.[0] || '',
       });
@@ -217,12 +217,14 @@ const handleInputChange = (label: string, value: string) => {
   }
 
   const phone = formData['Phone Number'];
-  if (!phone) {
-    errors['Phone Number'] = 'Phone number is required.';
-  } else if (!/^\d+$/.test(phone)) {
-    errors['Phone Number'] = 'Phone number must contain only digits.';
-  }
-
+ if (!phone) {
+  errors['Phone Number'] = 'Phone number is required.';
+} else if (!/^\d+$/.test(phone)) {
+  errors['Phone Number'] = 'Phone number must contain only digits.';
+} 
+// else if (phone.length !== 15) {
+//   errors['Phone Number'] = 'Phone number must be exactly 15 digits.';
+// }
   setErrors(errors);
   return Object.keys(errors).length === 0;
 };
@@ -255,6 +257,7 @@ console.log(token, 'token');
     form.append('last_name', formData['Last Name'] || '');
     form.append('phone_number', formData['Phone Number'] || '');
     form.append('about', formData['about'] || '');
+    form.append('experience', formData['Experience'] || '');
     selectedJobs.forEach(jobId => {
       form.append('user_job_types', jobId);
     });
@@ -402,7 +405,7 @@ console.log(token, 'token');
                   marginTop: 10,
                   borderRadius: 10,
                 }}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             )}
           </View>
@@ -482,6 +485,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 10,
+    
   },
   imageButton: {
     backgroundColor: '#6264A7',

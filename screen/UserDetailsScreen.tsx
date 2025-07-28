@@ -12,7 +12,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import {Icon} from 'react-native-elements';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
@@ -90,12 +90,18 @@ const AccountScreen = () => {
     fetchUserProfile();
   }, []);
 
-  if (loading) return <ActivityIndicator style={{flex: 1}} size="large" />;
+  if (loading) return <ActivityIndicator style={{flex: 1}} size="large" color="#6264A7" />;
   const socialMediaCheck = userData?.social_media_provider;
   const handleBackPress = () => {
     navigation.goBack();
   };
-
+  const handleLogout = async () => {
+    const success = await logout();
+    console.log('logout');
+    if (success) {
+      navigation.navigate('Login');
+    }
+  };  
   const handleEditPress = () => {
     navigation.navigate('UserDetailScreen', {
       userData: userData,
@@ -131,7 +137,7 @@ const AccountScreen = () => {
     return (
       <TouchableOpacity style={styles.row} onPress={onPress}>
         <Text style={styles.rowText}>{label}</Text>
-        <Icon name="chevron-forward" size={20} color="#333" />
+        <Icon name="chevron-forward" type="ionicon" size={16} color="#333" />
       </TouchableOpacity>
     );
   };
@@ -155,7 +161,12 @@ const AccountScreen = () => {
                 <TouchableOpacity
                   style={styles.editIcon}
                   onPress={handleEditPress}>
-                  <Icon name="pencil" size={16} color="#fff" />
+                  <Icon
+                    name="pencil"
+                    type="ionicon"
+                    size={16}
+                    color="#fff"
+                  />
                 </TouchableOpacity>
               </View>
               <Text style={styles.profileName}>
@@ -183,8 +194,13 @@ const AccountScreen = () => {
                 navigation.navigate('ResetPassword'),
               )}
 
-            <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-              <Icon name="log-out-outline" size={20} color="#fff" />
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Icon
+                name="log-out-outline"
+                type="ionicon"
+                size={24}
+                color="#fff"
+              />
               <Text style={styles.logoutText}>Log out</Text>
             </TouchableOpacity>
           </ScrollView>

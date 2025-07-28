@@ -31,7 +31,7 @@ const NewsScreen = ({ item }: any) => {
 };
 
 export default function NewsFeed({
-  heading = 'New Feed',
+  heading = 'News Feed',
   showBackButton = true,
   showHeading = true,
   onBackPress = () => {},

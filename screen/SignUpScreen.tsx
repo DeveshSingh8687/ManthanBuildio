@@ -12,12 +12,12 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import {RootStackParamList} from '../navigation/Navigation';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 import fireStore from '@react-native-firebase/firestore';
 import uuid from 'react-native-uuid';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import {Icon} from 'react-native-elements';
+
 import {_signInWithGoogle, onFacebookButtonPress} from './config/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -130,7 +130,7 @@ export default function SignUpScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={navigation.goBack}>
-            <Icon name="arrow-back" size={28} color="#333" />
+            {/* <Icon name="arrow-back" size={28} color="#333" /> */}
           </TouchableOpacity>
 
           <Text style={styles.title}>Sign up</Text>
@@ -190,22 +190,24 @@ export default function SignUpScreen() {
           <TouchableOpacity
             style={styles.socialButton}
             onPress={onGoogleButtonPress}>
-            <FontAwesome
+            <Icon
               name="google"
+              type="font-awesome"
               size={20}
               color="#EA4335"
-              style={styles.socialIcon}
+              containerStyle={styles.socialIcon}
             />
             <Text style={styles.socialText}>Sign up with Google</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.socialButton}
             onPress={() => onFacebookButtonPress(navigation)}>
-            <FontAwesome
+            <Icon
               name="facebook"
+              type="font-awesome"
               size={20}
               color="#3b5998"
-              style={styles.socialIcon}
+              containerStyle={styles.socialIcon}
             />
             <Text style={styles.socialText}>Sign up with Facebook</Text>
           </TouchableOpacity>

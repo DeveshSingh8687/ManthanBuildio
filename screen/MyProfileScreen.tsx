@@ -82,7 +82,7 @@ const PostCard = ({item}: any) => {
   );
 };
 
-export default function MyProfile({heading = 'Job Posts'}: {heading?: string}) {
+export default function MyProfile({heading = 'My Posts'}: {heading?: string}) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (

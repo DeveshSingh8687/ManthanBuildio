@@ -12,8 +12,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import {Icon} from 'react-native-elements';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import {
@@ -180,11 +179,16 @@ export default function LoginScreen() {
   }
 
   return (
-    <><CustomModal
-      visible={modalVisible}
-      message={modalMessage}
-      onClose={() => setModalVisible(false)} title={''} buttonText={'Try Again'} /><KeyboardAvoidingView
-        style={{ flex: 1 }}
+    <>
+      <CustomModal
+        visible={modalVisible}
+        message={modalMessage}
+        onClose={() => setModalVisible(false)}
+        title={''}
+        buttonText={'Try Again'}
+      />
+      <KeyboardAvoidingView
+        style={{flex: 1}}
         behavior={undefined}
         keyboardVerticalOffset={0}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -207,7 +211,8 @@ export default function LoginScreen() {
               placeholderTextColor="#999"
               keyboardType="email-address"
               value={email}
-              onChangeText={setEmail} />
+              onChangeText={setEmail}
+            />
             {/* Password Input with Toggle */}
             <View style={styles.passwordContainer}>
               <TextInput
@@ -216,13 +221,15 @@ export default function LoginScreen() {
                 placeholderTextColor="#999"
                 secureTextEntry={!passwordVisible}
                 value={password}
-                onChangeText={setPassword} />
+                onChangeText={setPassword}
+              />
               <TouchableOpacity
                 onPress={() => setPasswordVisible(!passwordVisible)}>
                 <Icon
                   name={passwordVisible ? 'visibility' : 'visibility-off'}
                   size={20}
-                  color="#999" />
+                  color="#999"
+                />
               </TouchableOpacity>
             </View>
             {/* Login Button */}
@@ -243,7 +250,7 @@ export default function LoginScreen() {
             </View>
             {/* Sign up */}
             <View style={styles.signUpContainer}>
-              <Text style={{ color: '#999' }}>Create New Account? </Text>
+              <Text style={{color: '#999'}}>Create New Account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                 <Text style={styles.signUpText}>Sign up</Text>
               </TouchableOpacity>
@@ -254,26 +261,31 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={styles.socialButton}
               onPress={onGoogleButtonPress}>
-              <FontAwesome
+              <Icon
                 name="google"
+                type="font-awesome"
                 size={20}
                 color="#EA4335"
-                style={styles.socialIcon} />
+                containerStyle={styles.socialIcon}
+              />
               <Text style={styles.socialText}>Sign up with Google</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.socialButton}
               onPress={onFacebookButtonPress}>
-              <FontAwesome
+              <Icon
                 name="facebook"
+                type="font-awesome"
                 size={20}
                 color="#3b5998"
-                style={styles.socialIcon} />
+                containerStyle={styles.socialIcon}
+              />
               <Text style={styles.socialText}>Sign up with Facebook</Text>
             </TouchableOpacity>
           </ScrollView>
         </TouchableWithoutFeedback>
-      </KeyboardAvoidingView></>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 

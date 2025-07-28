@@ -75,7 +75,7 @@ const BottomTabBar = () => {
           size={24}
           color={activeTab === 'Notify' ? '#6264A7' : '#888'}
         />
-        <Text style={[styles.navLabel, activeTab === 'Notify' && { color: '#6264A7' }]}>Notify</Text>
+        <Text style={[styles.navLabel, activeTab === 'Notify' && { color: '#6264A7' }]}>Notifications</Text>
       </TouchableOpacity>
     </View>
   );
