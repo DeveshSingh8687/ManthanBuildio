@@ -73,13 +73,13 @@ const ForgetPassword = () => {
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
-          {!otpModalVisible && (
+          {/* {!otpModalVisible && (
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}>
               <Icon name="arrow-back" size={28} color="#333" />
             </TouchableOpacity>
-          )}
+          )} */}
 
           <Text style={styles.title}>Forget Password</Text>
 
@@ -159,11 +159,10 @@ const styles = StyleSheet.create({
     paddingTop: 70, // Adjusted to move content ~50px upward
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e1e5d',
-    marginBottom: 20,
-    paddingHorizontal: 15,
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   input: {
     borderWidth: 1,

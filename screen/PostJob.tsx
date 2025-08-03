@@ -10,6 +10,7 @@ import {
   Image,
   PermissionsAndroid,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {Icon} from 'react-native-elements';
 import {
@@ -24,6 +25,7 @@ import BottomTabBar from './components/BottomNavigaionBar';
 import JobCategoryList from './components/DropDown';
 import TopBar from './components/TopBar';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AddJobScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -37,6 +39,7 @@ const AddJobScreen = () => {
     'Deadline',
     'Budget',
   ];
+  const [loading, setLoading] = useState(false);
 
   const isMultiline = (label: string) =>
     label === 'Description' || label === 'Requirements';
@@ -104,31 +107,52 @@ const AddJobScreen = () => {
   const handleSubmit = () => {
     if (!validateForm()) return;
 
-    const payload = {
-      ...formData,
-      jobType: jobTypeValue,
-    };
-
-    Alert.alert('Sending data: ' + JSON.stringify(payload, null, 2));
-    submitJob(payload);
+    submitJob(); // Now it uses multipart version
   };
 
-  const submitJob = async (payload: Record<string, any>) => {
+  const submitJob = async () => {
+    const token = await AsyncStorage.getItem('authToken');
+
+    setLoading(true);
+
+    const formDataToSend = new FormData();
+
+    formDataToSend.append('description', formData['Description']);
+    formDataToSend.append('job_type', jobTypeValue);
+    formDataToSend.append('location', formData['Job location'] || '');
+    formDataToSend.append('deadline', formData['Deadline'] || '');
+    formDataToSend.append('budget', formData['Budget'] || '');
+
+    imageUris.forEach((uri, index) => {
+      formDataToSend.append('images[]', {
+        uri,
+        type: 'image/jpeg',
+        name: `image_${index}.jpg`,
+      });
+    });
+
     try {
-      const response = await fetch('https://example.com/api/jobs', {
+      const response = await fetch('https://buildio.co.nz/api/jobs/update/1', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload),
+        body: formDataToSend,
+        headers: {
+          Authorization: `Bearer ${token}`, // 🔐 Use bearer token
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        Alert.alert('Job posted successfully', JSON.stringify(data, null, 2));
+        Alert.alert('Success', 'Job updated successfully!');
       } else {
-        throw new Error('Failed to post job');
+        throw new Error(data?.message || 'Failed to update job');
       }
     } catch (error: any) {
-      Alert.alert('Error: ' + error.message);
+      Alert.alert('Error', error.message);
+      console.error('Error updating job:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,17 +178,25 @@ const AddJobScreen = () => {
 
   return (
     <>
+ {loading && (
+  <View style={styles.loadingOverlay}>
+    <ActivityIndicator size="large" color="#6264A7" />
+    <Text style={{color: '#6264A7', marginTop: 10}}>
+      Updating profile...
+    </Text>
+  </View>
+)}
       <TopBar />
-         <View style={styles.header}>
-            <View style={styles.leftSection}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}>
-                <Icon name="arrow-back" size={24} color="#6264A7" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.title}>Post a Job</Text>
-          </View>
+      <View style={styles.header}>
+        <View style={styles.leftSection}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.title}>Post a Job</Text>
+      </View>
       <KeyboardAwareScrollView
         contentContainerStyle={{flexGrow: 1}}
         extraScrollHeight={40}
@@ -172,8 +204,6 @@ const AddJobScreen = () => {
         enableOnAndroid
         showsVerticalScrollIndicator={false}>
         <View style={{flex: 1}}>
-    
-
           <View style={styles.container}>
             {fields.map((label, index) => {
               const multiline = isMultiline(label);
@@ -280,6 +310,17 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+    loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
   container: {
     paddingBottom: 140,
     paddingTop: 10,
@@ -296,13 +337,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    position: 'absolute',
-    left: '30%',
-    transform: [{translateX: -45}],
-    top: 24,
+  marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   removeButton: {
     position: 'absolute',

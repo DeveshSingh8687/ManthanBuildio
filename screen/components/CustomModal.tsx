@@ -7,6 +7,8 @@ interface CustomModalProps {
   message: string;
   buttonText: string;
   onClose: () => void;
+  confirmText?: string;
+  onConfirm?: () => void;
 }
 
 const CustomModal: React.FC<CustomModalProps> = ({
@@ -15,6 +17,8 @@ const CustomModal: React.FC<CustomModalProps> = ({
   message,
   buttonText,
   onClose,
+  confirmText,
+  onConfirm,
 }) => {
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
@@ -22,9 +26,17 @@ const CustomModal: React.FC<CustomModalProps> = ({
         <View style={styles.container}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>{buttonText}</Text>
-          </TouchableOpacity>
+
+          <View style={styles.buttonRow}>
+            {onConfirm && (
+              <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
+                <Text style={styles.buttonText}>{confirmText || 'Yes'}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.button} onPress={onClose}>
+              <Text style={styles.buttonText}>{buttonText}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -59,11 +71,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   button: {
     backgroundColor: '#6264A7',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25,
+  },
+  confirmButton: {
+    backgroundColor: '#e53935',
   },
   buttonText: {
     color: '#fff',

@@ -9,10 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {
-  NavigationProp,
-  useNavigation,
-} from '@react-navigation/native';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
@@ -93,7 +90,7 @@ export default function MyProfile({heading = 'My Posts'}: {heading?: string}) {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#6264A7" />
+          {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
         </TouchableOpacity>
         <Text style={styles.heading}>{heading}</Text>
       </View>
@@ -105,7 +102,7 @@ export default function MyProfile({heading = 'My Posts'}: {heading?: string}) {
         contentContainerStyle={styles.list}
       />
       <>
-        <View style={{height: 100, backgroundColor:'#fff'}} />
+        <View style={{height: 100, backgroundColor: '#fff'}} />
         <BottomTabBar />
       </>
     </View>
@@ -200,17 +197,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 12,
   },
- 
-  
- 
+
   backButton: {
     padding: 8,
     borderRadius: 8,
   },
   heading: {
-    marginLeft: 10,
-    fontSize: 18,
-    fontWeight: 'bold',
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   headerContainer: {
     flexDirection: 'row',

@@ -1,4 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
+import ImagePicker from 'react-native-image-crop-picker';
+
 import {
   View,
   Text,
@@ -29,6 +31,7 @@ import {PermissionsAndroid} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type {RouteProp} from '@react-navigation/native';
+import ImageCropPicker from 'react-native-image-crop-picker';
 
 const AddJobScreen = ({
   route,
@@ -46,55 +49,46 @@ const AddJobScreen = ({
   const [selectedJobs, setSelectedJobs] = useState<any[]>([]);
 
 
-  // const prepareUserJobTypes = async (selectedJobs: any) => {
-  //   const userId = await getUserId();
-  //   // const timestamp = new Date().toISOString();
-  //   console.log('User ID:', userId);
-
-  //   if (!userId) {
-  //     throw new Error('User ID not found in AsyncStorage');
-  //   }
-
-  //   const userJobTypes = selectedJobs.map((job: {id: any}) => ({
-  //     user_id: userId,
-  //     id: job.id,
-  //     // created_at: timestamp,
-  //     // updated_at: timestamp,
-  //   }));
-
-  //   return userJobTypes;
-  // };
-
   const handleCamera = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'This app needs camera access to take pictures.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        },
-      );
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
-    }
+  try {
+    const image = await ImageCropPicker.openCamera({
+      width: 100,
+      height: 100,
+      cropping: true,
+      mediaType: 'photo',
+      includeBase64: false,
+    });
 
-    launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
-      if (response.didCancel || response.errorCode) return;
-      if (response.assets && response.assets.length > 0) {
-        setSelectedImage(response.assets[0].uri ?? null);
-      }
+    if (image?.path) {
+      setSelectedImage(image.path);
+    }
+  } catch (err: any) {
+    if (err?.message !== 'User cancelled image selection') {
+      console.error('Camera error:', err);
+      Alert.alert('Failed to take photo.');
+    }
+  }
+};
+ const handleGallery = async () => {
+  try {
+    const image = await ImageCropPicker.openPicker({
+      width: 100,
+      height: 100,
+      cropping: true,
+      mediaType: 'photo',
+      includeBase64: false,
     });
-  };
-  const handleGallery = () => {
-    launchImageLibrary({mediaType: 'photo'}, response => {
-      if (response.didCancel || response.errorCode) return;
-      if (response.assets && response.assets.length > 0) {
-        setSelectedImage(response.assets[0].uri ?? null);
-      }
-    });
-  };
+
+    if (image?.path) {
+      setSelectedImage(image.path);
+    }
+  } catch (err) {
+    if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as any).message === 'string' && (err as any).message !== 'User cancelled image selection') {
+      console.error('Image picker error:', err);
+      Alert.alert('Failed to pick image.');
+    }
+  }
+};
   useEffect(() => {
     if (userData?.user_job_types) {
       const jobIds = userData.user_job_types.map(
@@ -117,47 +111,7 @@ const AddJobScreen = ({
       setSelectedImage(userData.profile_picture || null);
     }
   }, [userData]);
-  // const handleSubmit = async () => {
-  //   if (!validateForm()) return;
-
-  //   try {
-  //     const token = await AsyncStorage.getItem('YourAuthTokenKey'); // update with your key
-
-  //     const form = new FormData();
-
-  //     form.append('first_name', formData['Name']);
-  //     form.append('last_name', formData['Name']); // or add a Last Name field
-  //     form.append('phone_number', formData['Phone Number']);
-
-  //     if (selectedImage) {
-  //       const fileName = selectedImage.split('/').pop();
-  //       const fileType = fileName?.split('.').pop();
-
-  //       form.append('profile_image', {
-  //         uri: selectedImage,
-  //         type: `image/${fileType}`,
-  //         name: fileName || 'profile.jpg',
-  //       });
-  //     }
-
-  //     const response = await axios.post(
-  //       'http://4.245.1.145:4000/api/users/update',
-  //       form,
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           'Content-Type': 'multipart/form-data',
-  //         },
-  //       }
-  //     );
-
-  //     console.log('Profile updated:', response.data);
-  //     alert('Profile successfully updated!');
-  //   } catch (error) {
-  //     console.error('Update error:', error.message);
-  //     alert('Failed to update profile');
-  //   }
-  // };
+  
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const fields = [
@@ -229,11 +183,6 @@ const handleInputChange = (label: string, value: string) => {
   return Object.keys(errors).length === 0;
 };
 
-  // const handleSubmit = () => {
-  //   if (!validateForm()) return;
-  //   // submit logic
-  //   console.log('Form submitted:', formData);
-  // };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -331,7 +280,7 @@ console.log(token, 'token');
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={24} color="#6264A7" />
+            {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
           </TouchableOpacity>
         </View>
         <Text style={styles.title}>My Profile</Text>
@@ -400,8 +349,8 @@ console.log(token, 'token');
               <Image
                 source={{uri: selectedImage}}
                 style={{
-                  width: '100%',
-                  height: 200,
+                  width: '30%',
+                  height: 100,
                   marginTop: 10,
                   borderRadius: 10,
                 }}
@@ -442,13 +391,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
     position: 'absolute',
-    left: '30%',
+    left: '20%',
     transform: [{translateX: -45}],
-    top: 24,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#6264A7',
+    marginBottom: 0,
   },
   inputCard: {
     marginHorizontal: 16,

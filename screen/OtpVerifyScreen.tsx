@@ -69,7 +69,7 @@ const OtpVerification = () => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={28} color="#333" />
+            {/* <Icon name="arrow-back" size={28} color="#333" /> */}
           </TouchableOpacity>
 
           <Text style={styles.title}>Reset Password</Text>
@@ -126,11 +126,10 @@ const styles = StyleSheet.create({
     paddingTop: 70,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e1e5d',
-    marginBottom: 20,
-    paddingHorizontal: 15,
+   marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   input: {
     borderWidth: 1,

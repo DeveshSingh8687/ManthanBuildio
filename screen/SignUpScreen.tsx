@@ -15,7 +15,6 @@ import {
 import {RootStackParamList} from '../navigation/Navigation';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 import fireStore from '@react-native-firebase/firestore';
-import uuid from 'react-native-uuid';
 import {Icon} from 'react-native-elements';
 
 import {_signInWithGoogle, onFacebookButtonPress} from './config/auth';
@@ -228,11 +227,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1E1E1E',
-    marginBottom: 30,
-    paddingHorizontal: 15,
+ marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   signUpContainer: {
     flexDirection: 'row',

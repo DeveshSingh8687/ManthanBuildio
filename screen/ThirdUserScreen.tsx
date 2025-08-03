@@ -176,7 +176,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingTop: 30,
   },
-  titleText: { fontWeight: 'bold', fontSize: 16 },
+  titleText: {  marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%', },
 
   section: { marginBottom: 20 },
   sectionTitle: { fontWeight: 'bold', color: '#25396F', marginBottom: 5 },

@@ -220,15 +220,14 @@ export const logout = async () => {
 
     // ✅ Clear AsyncStorage
     try {
-      await AsyncStorage.clear();
-      console.log('AsyncStorage cleared');
+      await AsyncStorage.multiRemove(['authToken', 'firstName', 'lastName']);
+      console.log('Session keys removed from AsyncStorage');
     } catch (storageError) {
       console.log(
-        'AsyncStorage clear error:',
+        'Error clearing specific keys:',
         storageError?.message || storageError,
       );
     }
-
     return true;
   } catch (error) {
     console.error('General Logout Error:', error?.message || error);
@@ -237,13 +236,13 @@ export const logout = async () => {
 };
 
 export const handleSecurePress = async (screen, navigation) => {
-    const authToken = await AsyncStorage.getItem('authToken');
-   if (authToken && authToken.trim() !== '') {
-  navigation.navigate(screen);
-} else {
-  navigation.reset({
-    index: 0,
-    routes: [{ name: 'Login' }],
-  });
-}
-  };
+  const authToken = await AsyncStorage.getItem('authToken');
+  if (authToken && authToken.trim() !== '') {
+    navigation.navigate(screen);
+  } else {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Login'}],
+    });
+  }
+};

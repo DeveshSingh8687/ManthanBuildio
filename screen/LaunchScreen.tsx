@@ -1,17 +1,11 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  Animated,
-  View,
-  Image,
-  Dimensions,
-  StyleSheet,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/Navigation';
+import React, {useEffect, useRef} from 'react';
+import {Animated, View, Image, Dimensions, StyleSheet} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../navigation/Navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { height } = Dimensions.get('window');
+const {height} = Dimensions.get('window');
 
 type LaunchScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -25,20 +19,16 @@ export default function LaunchScreen() {
   useEffect(() => {
     const checkAndRedirect = async () => {
       try {
-        const userId = await AsyncStorage.getItem('USERID');
-        console.log('User ID from AsyncStorage:', userId);
-
+        const hasSeenIntro = await AsyncStorage.getItem('prefs:hasSeenIntro');
         // Fade out animation
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 1000,
           useNativeDriver: true,
         }).start(() => {
-          if (userId) {
-            console.log('User already logged in:', userId);
+          if (hasSeenIntro === 'true') {
             navigation.replace('HomeScreen');
           } else {
-            console.log('No user logged in, navigating to Welcome');
             navigation.replace('Welcome');
           }
         });
@@ -55,11 +45,8 @@ export default function LaunchScreen() {
   }, []);
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <Image
-        source={require('../assets/asset_logo.png')}
-        style={styles.logo}
-      />
+    <Animated.View style={[styles.container, {opacity: fadeAnim}]}>
+      <Image source={require('../assets/asset_logo.png')} style={styles.logo} />
     </Animated.View>
   );
 }

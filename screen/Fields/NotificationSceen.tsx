@@ -58,7 +58,7 @@ function NotificationsScreen({navigation}: Props) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#6264A7" />
+            {/* <Ionicons name="arrow-back" size={24} color="#6264A7" /> */}
           </TouchableOpacity>
           <Text style={styles.headerText}>Notifications</Text>
         </View>
@@ -106,10 +106,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1B4B',
-    marginLeft: 12,
+   marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   header: {
     marginBottom: 10,

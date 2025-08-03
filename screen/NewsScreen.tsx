@@ -1,5 +1,5 @@
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,16 @@ import {
   ScrollView,
   ActivityIndicator, // Import ActivityIndicator
 } from 'react-native';
-import { RootStackParamList } from '../navigation/Navigation';
+import {RootStackParamList} from '../navigation/Navigation';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import BottomTabBar from './components/BottomNavigaionBar';
-import { NavPopup } from './components/Modal';
+import {NavPopup} from './components/Modal';
 import TopBar from './components/TopBar';
 
-const NewsScreen = ({ item }: any) => {
+const NewsScreen = ({item}: any) => {
   return (
     <View style={styles.postCard}>
-      <Image source={{ uri: item.image }} style={styles.postImage} />
+      <Image source={{uri: item.image}} style={styles.postImage} />
       <Text style={styles.postText}>{item.text}</Text>
       <View style={styles.userRow}>
         <Text style={styles.userText}>
@@ -52,12 +52,12 @@ export default function NewsFeed({
   // Fetch data from the API
   useEffect(() => {
     fetch('https://6821d085b342dce8004be96b.mockapi.io/buildio/home/home')
-      .then((response) => response.json())
-      .then((data) => {
+      .then(response => response.json())
+      .then(data => {
         setJobPosts(data); // Set the fetched data to the jobPosts state
         setLoading(false); // Set loading to false once data is loaded
       })
-      .catch((error) => {
+      .catch(error => {
         console.error('Error fetching job posts:', error);
         setLoading(false); // Set loading to false in case of an error
       });
@@ -84,9 +84,8 @@ export default function NewsFeed({
                 style={styles.backButton}
                 onPress={() => {
                   navigation.goBack();
-                }}
-              >
-                <Icon name="arrow-back" size={24} color="#6264A7" />
+                }}>
+                {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
               </TouchableOpacity>
             )}
             {showHeading && <Text style={styles.heading}>{heading}</Text>}
@@ -95,14 +94,14 @@ export default function NewsFeed({
           {/* Main Content */}
           <FlatList
             data={showBackButton ? jobPosts : limitedPosts}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => <NewsScreen item={item} />}
+            keyExtractor={item => String(item.id)}
+            renderItem={({item}) => <NewsScreen item={item} />}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
 
           {/* Bottom Bar */}
-          {showHeading && <View style={{ height: 100 }} />}
+          {showHeading && <View style={{height: 100}} />}
           {showHeading && <BottomTabBar />}
         </>
       )}
@@ -120,17 +119,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
   },
-  profileButton: { marginRight: 10, padding: 10, borderRadius: 8 },
+  profileButton: {marginRight: 10, padding: 10, borderRadius: 8},
   backButton: {
-    marginTop: 10,
+    // marginTop: 10,
     padding: 8,
     marginRight: 10,
     borderRadius: 8,
   },
   heading: {
-    marginTop: 10,
-    fontSize: 18,
-    fontWeight: 'bold',
+    // marginTop: 10,
+    fontSize: 20,
+     fontWeight: '700',
+    color: '#6264A7',
   },
   list: {
     padding: 10,

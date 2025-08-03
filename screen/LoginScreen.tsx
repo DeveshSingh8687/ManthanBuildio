@@ -120,6 +120,7 @@ export default function LoginScreen() {
         } else {
           await AsyncStorage.removeItem('lastName');
         }
+        await AsyncStorage.setItem('prefs:hasSeenIntro', 'true');
 
         // ✅ Reuse helper to store info and navigate
         await goToNext(

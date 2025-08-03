@@ -80,7 +80,7 @@ export default function ResetPassword() {
           <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
             <View style={styles.headerContainer}>
               <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Icon name="arrow-back" size={24} color="#6264A7" />
+                {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
               </TouchableOpacity>
               <Text style={styles.heading}>Reset Password</Text>
             </View>
@@ -150,9 +150,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   heading: {
-    marginLeft: 10,
-    fontSize: 18,
-    fontWeight: 'bold',
+ marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '32%',
   },
   headerContainer: {
     flexDirection: 'row',

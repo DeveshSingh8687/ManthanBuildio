@@ -93,7 +93,7 @@ const ManagePaymentMethodsScreen = ({navigation}: Props) => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#6264A7" />
+            {/* <Ionicons name="arrow-back" size={24} color="#6264A7" /> */}
           </TouchableOpacity>
           <Text style={styles.title}>Manage payment methods</Text>
         </View>
@@ -221,10 +221,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1B4B',
-    marginLeft: 10,
+   marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '28%',
   },
   row: {
     flexDirection: 'row',

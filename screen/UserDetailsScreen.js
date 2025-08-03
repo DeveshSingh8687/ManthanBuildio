@@ -31,17 +31,18 @@ const profileData = {
 };
 
 const AccountScreen = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation();
 
-  type UserData = {
-    first_name: string;
-    last_name: string;
-    profile_picture?: string;
-    social_media_provider?: string;
-    // add other fields as needed
-  };
+  // type UserData = {
+  //   first_name: string;
+  //   last_name: string;
+  //   profile_picture?: string;
+  //   social_media_provider?: string;
+  //   addresses?: any; // add the addresses property, adjust type as needed
+  //   // add other fields as needed
+  // };
 
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = async () => {
@@ -71,6 +72,7 @@ const AccountScreen = () => {
       if (contentType && contentType.includes('application/json')) {
         const json = JSON.parse(text);
         if (response.ok) {
+          console.log('User data fetched successfully:', json.data);
           setUserData(json.data);
         } else {
           Alert.alert('Error', json.message || 'Failed to fetch user');
@@ -85,6 +87,8 @@ const AccountScreen = () => {
       setLoading(false);
     }
   };
+  console.log('User Data:', userData?.addresses);
+  const addresses = userData?.addresses || [];
 
   useEffect(() => {
     fetchUserProfile();
@@ -105,17 +109,19 @@ const AccountScreen = () => {
   const handleEditPress = () => {
     navigation.navigate('UserDetailScreen', {
       userData: userData,
-    } as any);
+    } );
   };
 
   // const handleLogout = () => {
   //   console.log('Logout pressed');
   // };
 
-  const renderRow = (label: string, p0: () => void) => {
+  const renderRow = (label, p0) => {
     const onPress = () => {
       if (label === 'Manage address') {
-        navigation.navigate('ManageAddressScreen');
+        navigation.navigate('ManageAddressScreen', {
+          addressArray: addresses,
+        });
       } else if (label === 'Manage Payment Methods') {
         navigation.navigate('ManagePaymentMethodsScreen'); // example
       } else if (label === 'About Buildio') {

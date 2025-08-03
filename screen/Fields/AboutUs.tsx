@@ -19,7 +19,7 @@ const AboutUsScreen = ({ navigation }:Props) => {
           {/* Header */}
           <View style={styles.header}>
               <TouchableOpacity onPress={() => navigation.goBack()}>
-                  <Ionicons name="arrow-back" size={24} color="#6264A7" style={styles.backButton} />
+                  {/* <Ionicons name="arrow-back" size={24} color="#6264A7" style={styles.backButton} /> */}
               </TouchableOpacity>
               <Text style={styles.headerText}>{aboutData.title}</Text>
           </View>
@@ -56,10 +56,10 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1B4B',
-    marginLeft: 12,
+  marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '35%',
   },
   content: {
     marginTop: 30,

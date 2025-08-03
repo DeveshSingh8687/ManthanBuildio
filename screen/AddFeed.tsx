@@ -18,14 +18,12 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
-import {RootStackParamList} from '../navigation/Navigation';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 const AddPostScreen = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
+  const navigation = useNavigation();
 
   const [postTitle, setPostTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -34,7 +32,7 @@ const AddPostScreen = () => {
     description?: string;
   }>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-const [imageUris, setImageUris] = useState<string[]>([]);
+  const [imageUris, setImageUris] = useState<string[]>([]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
@@ -77,83 +75,85 @@ const [imageUris, setImageUris] = useState<string[]>([]);
       setPostTitle('');
       setDescription('');
       setErrors({});
-      setImageUris([] );
+      setImageUris([]);
     }
   };
 
   const handleCamera = async () => {
-  if (Platform.OS === 'android') {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.CAMERA,
-      {
-        title: 'Camera Permission',
-        message: 'This app needs camera access to take pictures.',
-        buttonNeutral: 'Ask Me Later',
-        buttonNegative: 'Cancel',
-        buttonPositive: 'OK',
-      },
-    );
-    if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
-  }
-
-  launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
-    if (response.didCancel || response.errorCode) return;
-
-    if (response.assets && response.assets.length > 0) {
-      const newUris = response.assets
-        .map(asset => asset.uri)
-        .filter(uri => uri !== undefined) as string[];
-
-      setImageUris(prevUris => [...prevUris, ...newUris]);
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'This app needs camera access to take pictures.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
     }
-  });
-};
-  const [fullName, setFullName] = useState('');
 
-useEffect(() => {
-  const loadName = async () => {
-    try {
-      const first = await AsyncStorage.getItem('firstName');
-      const last = await AsyncStorage.getItem('lastName');
-      console.log('Got from storage:', first, last);
-      setFullName(`${first || ''} ${last || ''}`);
-    } catch (e) {
-      console.error('Error loading name:', e);
-    }
-  };
+    launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
+      if (response.didCancel || response.errorCode) return;
 
-  loadName();
-}, []); // Runs once when the component mounts
-
-useEffect(() => {
-  if (fullName) {
-    console.log(fullName, 'updated full name'); // ✅ This runs whenever fullName changes
-  }
-}, [fullName]); 
-
-const handleLaunchGallery = () => {
-  launchImageLibrary(
-    {
-      mediaType: 'photo',
-      selectionLimit: 0, // 🔥 Allows multiple image selection
-    },
-    response => {
-      if (response.didCancel) return;
-      if (response.errorCode) {
-        console.log('Gallery error:', response.errorMessage);
-      } else if (response.assets && response.assets.length > 0) {
-        const selectedUris = response.assets
+      if (response.assets && response.assets.length > 0) {
+        const newUris = response.assets
           .map(asset => asset.uri)
           .filter(uri => uri !== undefined) as string[];
 
-        setImageUris(prevUris => [...prevUris, ...selectedUris]);
+        setImageUris(prevUris => [...prevUris, ...newUris]);
       }
-    },
-  );
-};
-const removeImage = (indexToRemove: number) => {
-  setImageUris(prevUris => prevUris.filter((_, index) => index !== indexToRemove));
-};
+    });
+  };
+  const [fullName, setFullName] = useState('');
+
+  useEffect(() => {
+    const loadName = async () => {
+      try {
+        const first = await AsyncStorage.getItem('firstName');
+        const last = await AsyncStorage.getItem('lastName');
+        console.log('Got from storage:', first, last);
+        setFullName(`${first || ''} ${last || ''}`);
+      } catch (e) {
+        console.error('Error loading name:', e);
+      }
+    };
+
+    loadName();
+  }, []); // Runs once when the component mounts
+
+  useEffect(() => {
+    if (fullName) {
+      console.log(fullName, 'updated full name'); // ✅ This runs whenever fullName changes
+    }
+  }, [fullName]);
+
+  const handleLaunchGallery = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        selectionLimit: 0, // 🔥 Allows multiple image selection
+      },
+      response => {
+        if (response.didCancel) return;
+        if (response.errorCode) {
+          console.log('Gallery error:', response.errorMessage);
+        } else if (response.assets && response.assets.length > 0) {
+          const selectedUris = response.assets
+            .map(asset => asset.uri)
+            .filter(uri => uri !== undefined) as string[];
+
+          setImageUris(prevUris => [...prevUris, ...selectedUris]);
+        }
+      },
+    );
+  };
+  const removeImage = (indexToRemove: number) => {
+    setImageUris(prevUris =>
+      prevUris.filter((_, index) => index !== indexToRemove),
+    );
+  };
   return (
     <>
       <TopBar />
@@ -171,7 +171,7 @@ const removeImage = (indexToRemove: number) => {
                 <TouchableOpacity
                   style={styles.backButton}
                   onPress={() => navigation.goBack()}>
-                  <Icon name="arrow-back" size={24} color="#6264A7" />
+                  {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Add Post</Text>
               </View>
@@ -224,26 +224,24 @@ const removeImage = (indexToRemove: number) => {
             </View>
 
             {/* Image Preview */}
-     {imageUris.length > 0 && (
-  <View style={styles.imagePreviewContainer}>
-    {imageUris.map((uri, index) => (
-      <View key={index} style={styles.imageWrapper}>
-        <Image source={{uri}} style={styles.imagePreview} />
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => {
-            const newUris = [...imageUris];
-            newUris.splice(index, 1);
-            setImageUris(newUris);
-          }}>
-          <Icon name="close" size={20} color="white" />
-        </TouchableOpacity>
-      </View>
-    ))}
-  </View>
-)}
-
-
+            {imageUris.length > 0 && (
+              <View style={styles.imagePreviewContainer}>
+                {imageUris.map((uri, index) => (
+                  <View key={index} style={styles.imageWrapper}>
+                    <Image source={{uri}} style={styles.imagePreview} />
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => {
+                        const newUris = [...imageUris];
+                        newUris.splice(index, 1);
+                        setImageUris(newUris);
+                      }}>
+                      <Icon name="close" size={20} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* Icons */}
             <View style={styles.footerIconsInline}>
@@ -279,9 +277,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   scrollContainer: {
-  flexGrow: 1,
-  paddingHorizontal: 20,
-  paddingBottom: 40,
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   container: {
     flex: 1,
@@ -294,14 +292,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    // flexDirection: 'row',
+    // alignItems: 'center',
+    // justifyContent: 'space-between',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1A1B4B',
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    left: '38%',
   },
   profileContainer: {
     flexDirection: 'row',
@@ -373,9 +372,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginVertical: 10,
     justifyContent: 'flex-start',
-
   },
-   imagePreview: {
+  imagePreview: {
     width: 200, // Roughly 4 per row with margin
     height: 200,
     margin: 5,
@@ -402,10 +400,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   imageWrapper: {
-  position: 'relative',
-  marginRight: 10,
-  marginBottom: 10,
-},
+    position: 'relative',
+    marginRight: 10,
+    marginBottom: 10,
+  },
 });
 
 export default AddPostScreen;
