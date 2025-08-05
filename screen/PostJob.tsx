@@ -149,8 +149,8 @@ const AddJobScreen = () => {
         throw new Error(data?.message || 'Failed to update job');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message);
-      console.error('Error updating job:', error);
+      Alert.alert('Error', error);
+      console.log('Error updating job:', error.message);
     } finally {
       setLoading(false);
     }

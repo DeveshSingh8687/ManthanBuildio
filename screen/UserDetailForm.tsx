@@ -48,47 +48,52 @@ const AddJobScreen = ({
   const [loading, setLoading] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<any[]>([]);
 
-
   const handleCamera = async () => {
-  try {
-    const image = await ImageCropPicker.openCamera({
-      width: 100,
-      height: 100,
-      cropping: true,
-      mediaType: 'photo',
-      includeBase64: false,
-    });
+    try {
+      const image = await ImageCropPicker.openCamera({
+        width: 100,
+        height: 100,
+        cropping: true,
+        mediaType: 'photo',
+        includeBase64: false,
+      });
 
-    if (image?.path) {
-      setSelectedImage(image.path);
+      if (image?.path) {
+        setSelectedImage(image.path);
+      }
+    } catch (err: any) {
+      if (err?.message !== 'User cancelled image selection') {
+        console.error('Camera error:', err);
+        Alert.alert('Failed to take photo.');
+      }
     }
-  } catch (err: any) {
-    if (err?.message !== 'User cancelled image selection') {
-      console.error('Camera error:', err);
-      Alert.alert('Failed to take photo.');
-    }
-  }
-};
- const handleGallery = async () => {
-  try {
-    const image = await ImageCropPicker.openPicker({
-      width: 100,
-      height: 100,
-      cropping: true,
-      mediaType: 'photo',
-      includeBase64: false,
-    });
+  };
+  const handleGallery = async () => {
+    try {
+      const image = await ImageCropPicker.openPicker({
+        width: 100,
+        height: 100,
+        cropping: true,
+        mediaType: 'photo',
+        includeBase64: false,
+      });
 
-    if (image?.path) {
-      setSelectedImage(image.path);
+      if (image?.path) {
+        setSelectedImage(image.path);
+      }
+    } catch (err) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'message' in err &&
+        typeof (err as any).message === 'string' &&
+        (err as any).message !== 'User cancelled image selection'
+      ) {
+        console.error('Image picker error:', err);
+        Alert.alert('Failed to pick image.');
+      }
     }
-  } catch (err) {
-    if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as any).message === 'string' && (err as any).message !== 'User cancelled image selection') {
-      console.error('Image picker error:', err);
-      Alert.alert('Failed to pick image.');
-    }
-  }
-};
+  };
   useEffect(() => {
     if (userData?.user_job_types) {
       const jobIds = userData.user_job_types.map(
@@ -100,10 +105,10 @@ const AddJobScreen = ({
   useEffect(() => {
     if (userData) {
       setFormData({
-         Name: userData.first_name || '',
+        Name: userData.first_name || '',
         'Last Name': userData.last_name || '',
         'Phone Number': userData.phone_number || '',
-        'about': userData.about || '',
+        about: userData.about || '',
         Experience: userData?.experience || '',
         Email: userData.email || '',
         'Job Type': userData.user_job_types?.[0] || '',
@@ -111,7 +116,7 @@ const AddJobScreen = ({
       setSelectedImage(userData.profile_picture || null);
     }
   }, [userData]);
-  
+
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   const fields = [
@@ -126,28 +131,28 @@ const AddJobScreen = ({
   const isMultiline = (label: string) =>
     label === 'Description' || label === 'Experience';
 
-const handleInputChange = (label: string, value: string) => {
-  setFormData(prev => ({
-    ...prev,
-    [label]: value,
-  }));
+  const handleInputChange = (label: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [label]: value,
+    }));
 
-  setErrors(prevErrors => {
-    const newErrors = { ...prevErrors };
+    setErrors(prevErrors => {
+      const newErrors = {...prevErrors};
 
-    if (label === 'Phone Number') {
-      if (/^\d+$/.test(value)) {
-        delete newErrors['Phone Number']; // ✅ clear error on valid input
+      if (label === 'Phone Number') {
+        if (/^\d+$/.test(value)) {
+          delete newErrors['Phone Number']; // ✅ clear error on valid input
+        }
       }
-    }
 
-    if (label === 'Name' && value.trim() !== '') {
-      delete newErrors['Name'];
-    }
+      if (label === 'Name' && value.trim() !== '') {
+        delete newErrors['Name'];
+      }
 
-    return newErrors;
-  });
-};
+      return newErrors;
+    });
+  };
 
   useEffect(() => {
     const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
@@ -163,32 +168,31 @@ const handleInputChange = (label: string, value: string) => {
     };
   }, []);
 
- const validateForm = () => {
-  const errors: Record<string, string> = {};
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
 
-  if (!formData['Name']) {
-    errors['Name'] = 'Name is required.';
-  }
+    if (!formData['Name']) {
+      errors['Name'] = 'Name is required.';
+    }
 
-  const phone = formData['Phone Number'];
- if (!phone) {
-  errors['Phone Number'] = 'Phone number is required.';
-} else if (!/^\d+$/.test(phone)) {
-  errors['Phone Number'] = 'Phone number must contain only digits.';
-} 
-// else if (phone.length !== 15) {
-//   errors['Phone Number'] = 'Phone number must be exactly 15 digits.';
-// }
-  setErrors(errors);
-  return Object.keys(errors).length === 0;
-};
-
+    const phone = formData['Phone Number'];
+    if (!phone) {
+      errors['Phone Number'] = 'Phone number is required.';
+    } else if (!/^\d+$/.test(phone)) {
+      errors['Phone Number'] = 'Phone number must contain only digits.';
+    }
+    // else if (phone.length !== 15) {
+    //   errors['Phone Number'] = 'Phone number must be exactly 15 digits.';
+    // }
+    setErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
     const token = await AsyncStorage.getItem('authToken');
     const uri = selectedImage;
-console.log(token, 'token');
+    console.log(token, 'token');
     if (!uri) {
       Alert.alert('Please select an image.');
       return;
@@ -243,7 +247,6 @@ console.log(token, 'token');
       setLoading(false); // Always stop loading
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       setModalVisible(false);
@@ -266,14 +269,14 @@ console.log(token, 'token');
   }
   return (
     <>
-    {loading && (
-  <View style={styles.loadingOverlay}>
-    <ActivityIndicator size="large" color="#6264A7" />
-    <Text style={{color: '#6264A7', marginTop: 10}}>
-      Updating profile...
-    </Text>
-  </View>
-)}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#6264A7" />
+          <Text style={{color: '#6264A7', marginTop: 10}}>
+            Updating profile...
+          </Text>
+        </View>
+      )}
       <TopBar />
       <View style={styles.header}>
         <View style={styles.leftSection}>
@@ -295,19 +298,28 @@ console.log(token, 'token');
           keyboardShouldPersistTaps="handled">
           {fields.map((label, index) => {
             const multiline = isMultiline(label);
+            const isEmail = label === 'Email';
             return (
-              <View key={index} style={styles.inputCard}>
+              <View
+                key={index}
+                style={[
+                  styles.inputCard,
+                  isEmail && {backgroundColor: '#f5f5f5'}, // light gray for disabled
+                ]}>
                 <View style={styles.inputHeader}>
                   <Text style={styles.label}>{label}</Text>
-                  <TouchableOpacity>
-                    <Icon name="edit" size={18} color="#6264A7" />
-                  </TouchableOpacity>
+                  {!isEmail && (
+                    <TouchableOpacity>
+                      <Icon name="edit" size={18} color="#6264A7" />
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <TextInput
                   style={[
                     styles.input,
                     multiline && styles.textArea,
-                    errors[label] && styles.inputError, // <-- error border if error exists
+                    errors[label] && styles.inputError,
+                    isEmail && {backgroundColor: '#f0f0f0'}, // <-- error border if error exists
                   ]}
                   placeholder={`Enter ${label.toLowerCase()}...`}
                   placeholderTextColor="#888"
@@ -316,6 +328,8 @@ console.log(token, 'token');
                   textAlignVertical={multiline ? 'top' : 'center'}
                   onChangeText={text => handleInputChange(label, text)}
                   value={formData[label] || ''}
+                  editable={!isEmail}
+                  selectTextOnFocus={!isEmail}
                 />
                 {errors[label] && (
                   <Text style={styles.errorText}>{errors[label]}</Text>
@@ -434,7 +448,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 10,
-    
   },
   imageButton: {
     backgroundColor: '#6264A7',

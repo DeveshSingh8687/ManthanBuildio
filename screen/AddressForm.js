@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -22,10 +24,12 @@ import Navigation from '../navigation/Navigation';
 import TopBar from './components/TopBar';
 import BottomTabBar from './components/BottomNavigaionBar';
 import CustomModal from './components/CustomModal';
+import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const AddressForm = () => {
   const route = useRoute();
   const {mode, address} = route.params || {};
+  const scrollViewRef = useRef(null);
 
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [location, setLocation] = useState(null);
@@ -33,8 +37,10 @@ const AddressForm = () => {
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalContent, setModalContent] = useState({title: '', message: ''});
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const [addressForm, setAddressForm] = useState({
+    map_Text: '',
     label: '',
     apartment: '',
     building: '',
@@ -42,6 +48,19 @@ const AddressForm = () => {
     latitude: null,
     longitude: null,
   });
+
+  useEffect(() => {
+    const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardVisible(true),
+    );
+    const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false),
+    );
+    return () => {
+      keyboardDidShow.remove();
+      keyboardDidHide.remove();
+    };
+  }, []);
 
   const handleUseCurrentLocation = () => {
     setLoadingLocation(true);
@@ -74,12 +93,27 @@ const AddressForm = () => {
     );
   };
 
+  useEffect(() => {
+    const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardVisible(true),
+    );
+    const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false),
+    );
+
+    return () => {
+      keyboardDidShow.remove();
+      keyboardDidHide.remove();
+    };
+  }, []);
+
   const handleInputChange = (field, value) => {
     setAddressForm(prev => ({...prev, [field]: value}));
   };
   React.useEffect(() => {
     if (address) {
       setAddressForm({
+        map_Text: address.map_Text,
         label: address.label || '',
         apartment: address.apartment || '',
         building: address.building || '',
@@ -151,147 +185,250 @@ const AddressForm = () => {
       setLoading(false);
     }
   };
-
+  //  <GooglePlacesAutocomplete
+  //     placeholder='Search'
+  //     onPress={(data, details = null) => {
+  //       // 'details' is provided when fetchDetails = true
+  //       console.log(data, details);
+  //     }}
+  //     query={{
+  //       key: 'AIzaSyA8g2VOaq9H39KmULPYywF9WDDIXAuGBrw',
+  //       language: 'en',
+  //     }}
+  //     currentLocation={true}
+  //     currentLocationLabel='Current location'
+  //   />
+  const apiKey = 'AIzaSyA8g2VOaq9H39KmULPYywF9WDDIXAuGBrw';
   return (
-    <SafeAreaView style={styles.container}>
-      <TopBar />
-      <KeyboardAvoidingView
-        style={{flex: 1}}
-        extraScrollHeight={40}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid
-        showsVerticalScrollIndicator={false}>
-        <ScrollView
-          contentContainerStyle={{flexGrow: 1, paddingHorizontal: 10}}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={styles.container}>
+        <TopBar />
+        <Text style={styles.headerText}>
+          {mode === 'update' ? 'Update Address' : 'Add New Address'}
+        </Text>
+        <KeyboardAwareScrollView
+          style={{flex: 1}}
+          extraScrollHeight={40}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={true}>
-          {loadingLocation && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#6264A7" />
-              <Text style={{color: '#6264A7', marginTop: 10}}>
-                Fetching location...
-              </Text>
-            </View>
-          )}
-          {loading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#6264A7" />
-              <Text style={{color: '#6264A7', marginTop: 10}}>
-                Saving address...
-              </Text>
-            </View>
-          )}
+          enableOnAndroid
+          showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={{flexGrow: 1, paddingHorizontal: 10}}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}>
+            {loadingLocation && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#6264A7" />
+                <Text style={{color: '#6264A7', marginTop: 10}}>
+                  Fetching location...
+                </Text>
+              </View>
+            )}
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#6264A7" />
+                <Text style={{color: '#6264A7', marginTop: 10}}>
+                  Saving address...
+                </Text>
+              </View>
+            )}
 
-          <View style={styles.formWrapper}>
-            <Text style={styles.headerText}>
-              {mode === 'update' ? 'Update Address' : 'Add New Address'}
-            </Text>
-
-            <TextInput
-              placeholder="Label (e.g., Home, Work)"
-              value={addressForm.label}
-              onChangeText={text => handleInputChange('label', text)}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Apartment, suite, etc."
-              value={addressForm.apartment}
-              onChangeText={text => handleInputChange('apartment', text)}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Building Name"
-              value={addressForm.building}
-              onChangeText={text => handleInputChange('building', text)}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Notes (optional)"
-              value={addressForm.notes}
-              onChangeText={text => handleInputChange('notes', text)}
-              style={[styles.input, {height: 100, textAlignVertical: 'top'}]}
-              multiline
-              numberOfLines={4}
-            />
-
-            <View style={{zIndex: 10}}>
+            <View style={styles.formWrapper}>
               <GooglePlacesAutocomplete
-                placeholder="Search for address"
+                placeholder="Where to?"
+                fetchDetails={true}
+                debounce={200}
+                enablePoweredByContainer={true}
+                nearbyPlacesAPI="GooglePlacesSearch"
+                minLength={2}
+                timeout={10000}
+                keyboardShouldPersistTaps="handled"
+                listViewDisplayed="auto"
+                keepResultsAfterBlur={false}
+                currentLocation={false}
+                currentLocationLabel="Current location"
+                enableHighAccuracyLocation={true}
+                onFail={() => console.warn('Google Places Autocomplete failed')}
+                onNotFound={() => console.log('No results found')}
+                onTimeout={() => console.warn('Google Places request timeout')}
                 onPress={(data, details = null) => {
                   const address =
                     details?.formatted_address || data.description;
-                  handleInputChange('address_line1', address);
-                }}
-                onFail={() =>
-                  Alert.alert('Error', 'Failed to fetch address details.')
-                }
-                predefinedPlaces={[]}
-                query={{
-                  key: 'AIzaSyDxGuLadB9uVwv8uecnQh6B5GCddKeglys',
-                  language: 'en',
-                }}
-                textInputProps={{
-                  onFocus: () => {
-                    console.log('GooglePlacesAutocomplete input focused');
+
+                  const latitude = details?.geometry?.location?.lat;
+                  const longitude = details?.geometry?.location?.lng;
+
+                  if (latitude && longitude) {
+                    const coords = {latitude, longitude};
+
+                    setLocation(coords);
+
+                    setAddressForm(prev => ({
+                      ...prev,
+                      mapText: address, // Optional: You could use this or keep it separate
+                      latitude,
+                      longitude,
+                    }));
                   }
+
+                  handleInputChange('address_line1', address); // Optional if you want to store address line
                 }}
-                fetchDetails
+                predefinedPlaces={[]}
+                predefinedPlacesAlwaysVisible={false}
                 styles={{
-                  container: {
-                    flex: 0,
-                    zIndex: 10,
+                  textInputContainer: {
+                    zIndex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 20,
+                    // marginHorizontal: 20,
+                    position: 'relative',
+                    shadowColor: '#d4d4d4',
+                  },
+                  textInput: {
+                    height: 48,
+                    borderColor: '#ccc',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    marginBottom: 12,
+                    backgroundColor: '#fff',
+                  },
+                  listView: {
+                    backgroundColor: 'white',
+                    position: 'relative',
+                    top: 0,
+                    width: '100%',
+                    zIndex: 99,
+                    borderRadius: 10,
+                    shadowColor: '#d4d4d4',
                   },
                 }}
-                enablePoweredByContainer={true}
+                query={{
+                  key: apiKey,
+                  language: 'en',
+                  types: 'geocode',
+                }}
+                // onPress={(data, details = null) => {
+                //   console.log('Selected data:', data);
+                //   console.log('Details:', details);
+
+                //   if (!details?.geometry?.location) {
+                //     console.warn('Missing geometry details!');
+                //     return;
+                //   }
+
+                //   handlePress({
+                //     latitude: details.geometry.location.lat,
+                //     longitude: details.geometry.location.lng,
+                //     address: data.description,
+                //   });
+                // }}
+                GooglePlacesSearchQuery={{
+                  rankby: 'distance',
+                  radius: 1000, // <-- REQUIRED if using 'distance'
+                }}
+                // renderLeftButton={() => (
+                //     <View className="justify-center items-center w-6 h-6">
+                //         <Image source={icon || icons.search} className="w-6 h-6" resizeMode="contain" />
+                //     </View>
+                // )}
+
+                textInputProps={{
+                  placeholderTextColor: 'gray',
+                  onFocus: () => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({
+                        y: 300,
+                        animated: true,
+                      });
+                    }, 100);
+                  },
+                }}
               />
+
+              <TouchableOpacity
+                style={styles.locationRow}
+                onPress={handleUseCurrentLocation}>
+                <Icon
+                  name="my-location"
+                  size={20}
+                  color="#6264A7"
+                  style={{marginBottom: 20}}
+                />
+                <Text style={styles.locationText}>Use current location</Text>
+              </TouchableOpacity>
+
+              {location && (
+                <View style={styles.mapContainer}>
+                  <MapView
+                    style={{flex: 1}}
+                    region={{
+                      latitude: location.latitude,
+                      longitude: location.longitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                    showsUserLocation
+                    scrollEnabled={false}
+                    zoomEnabled={false}>
+                    <Marker coordinate={location} />
+                  </MapView>
+                </View>
+              )}
+              <TextInput
+                placeholder="Your Current Address"
+                value={addressForm.map_Text}
+                onChangeText={text => handleInputChange('map_Text', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Label (e.g., Home, Work)"
+                value={addressForm.label}
+                onChangeText={text => handleInputChange('label', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Apartment, suite, etc."
+                value={addressForm.apartment}
+                onChangeText={text => handleInputChange('apartment', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Building Name"
+                value={addressForm.building}
+                onChangeText={text => handleInputChange('building', text)}
+                style={styles.input}
+              />
+              <TextInput
+                placeholder="Notes"
+                value={addressForm.notes}
+                onChangeText={text => handleInputChange('notes', text)}
+                style={[styles.input, {height: 100, textAlignVertical: 'top'}]}
+                multiline
+                numberOfLines={4}
+              />
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveAddress}>
+                <Text style={styles.saveButtonText}>
+                  {mode === 'update' ? 'Update Address' : 'Save Address'}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.locationRow}
-              onPress={handleUseCurrentLocation}>
-              <Icon
-                name="my-location"
-                size={20}
-                color="#6264A7"
-                style={{marginBottom: 20}}
-              />
-              <Text style={styles.locationText}>Use current location</Text>
-            </TouchableOpacity>
-            {location && (
-              <View style={styles.mapContainer}>
-                <MapView
-                  style={{flex: 1}}
-                  initialRegion={{
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  showsUserLocation
-                  scrollEnabled={false}
-                  zoomEnabled={false}>
-                  <Marker coordinate={location} />
-                </MapView>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSaveAddress}>
-              <Text style={styles.saveButtonText}>
-                {mode === 'update' ? 'Update Address' : 'Save Address'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-      <BottomTabBar />
-      <CustomModal
-        visible={modalVisible}
-        title={modalContent.title}
-        message={modalContent.message}
-        buttonText="OK"
-        onClose={() => setModalVisible(false)}
-      />
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAwareScrollView>
+        {!keyboardVisible && <BottomTabBar />}
+        <CustomModal
+          visible={modalVisible}
+          title={modalContent.title}
+          message={modalContent.message}
+          buttonText="OK"
+          onClose={() => setModalVisible(false)}
+        />
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -301,7 +438,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   formWrapper: {
-    paddingTop: 20, // adds space below TopBar
+    // paddingTop: 20, // adds space below TopBar
     paddingBottom: 100, // ensures content is visible above BottomTabBar
   },
   input: {
@@ -309,7 +446,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     marginBottom: 12,
     backgroundColor: '#fff',
   },
