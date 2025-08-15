@@ -11,6 +11,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import TopBar from '../components/TopBar';
 import BottomTabBar from '../components/BottomNavigaionBar';
+import Heading from '../components/CommonHeader';
 const notificationData = [
   {
     id: 1,
@@ -60,7 +61,7 @@ function NotificationsScreen({navigation}: Props) {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             {/* <Ionicons name="arrow-back" size={24} color="#6264A7" /> */}
           </TouchableOpacity>
-          <Text style={styles.headerText}>Notifications</Text>
+         <Heading>Notifications</Heading>
         </View>
 
         <TouchableOpacity style={styles.markReadButton}>

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   FlatList,
   View,
@@ -6,67 +6,89 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {NavigationProp, useNavigation} from '@react-navigation/native';
+import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
+import {NavPopup} from './components/Modal';
 import TopBar from './components/TopBar';
+import {fetchMyPosts, handleDeletePost} from '../utils/fetchPosts';
+import Heading from './components/CommonHeader';
+import ImageSlider from './components/ImageSlider';
+import { useFocusEffect } from '@react-navigation/native';
+import CustomModal from './components/CustomModal';
 
-const jobPosts = [
-  {
-    id: '1',
-    user: 'Gabie Sheber',
-    date: 'Jan. 02, 2024',
-    image:
-      'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=800&q=60',
-    content:
-      'Just finished this challenging but rewarding renovation project. Loved the transformation!',
-  },
-  {
-    id: '2',
-    user: 'John Smith',
-    date: 'Jan. 02, 2024',
-    image: 'https://randomuser.me/api/portraits/men/1.jpg',
-    content:
-      'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-  },
-  {
-    id: '3',
-    user: 'Gabie Sheber',
-    date: 'Jan. 02, 2024',
-    image:
-      'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=800&q=60',
-    content:
-      'Hiring experienced carpenters and roofers for our upcoming project. Apply today!',
-  },
-];
-
-const PostCard = ({item}: any) => {
+const PostCard = ({item, navigation, onDeletePress}: any) => {
   const [likes, setLikes] = useState(0);
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [expanded, setExpanded] = useState(false);
 
-  const handleLike = () => setLikes(prev => prev + 1);
+  const descriptionWords = item.description
+    ? item.description.split(/\s+/)
+    : [];
+  const isLong = descriptionWords.length > 20;
+  const displayText = expanded
+    ? item.description
+    : descriptionWords.slice(0, 20).join(' ') + (isLong ? '...' : '');
 
   return (
-    <TouchableOpacity style={styles.card}>
+    <View style={styles.card}>
+      {/* Header */}
       <View style={styles.header}>
         <Image
-          source={{uri: 'https://randomuser.me/api/portraits/women/65.jpg'}}
+          source={{
+            uri: item.user?.profile_picture || 'https://via.placeholder.com/50',
+          }}
           style={styles.avatar}
         />
-        <View>
-          <Text style={styles.name}>{item.user}</Text>
-          <Text style={styles.date}>{item.date}</Text>
+        <View style={{flex: 1}}>
+          <Text style={styles.name}>
+            {item.user?.first_name} {item.user?.last_name}
+          </Text>
+          <Text style={styles.date}>
+            {new Date(item.createdAt).toLocaleDateString()}
+          </Text>
+        </View>
+
+        {/* Edit & Delete Icons */}
+        <View style={{flexDirection: 'row'}}>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('AddPostScreen', {
+                updateFeed: true,
+                item: item,
+              })
+            }
+            style={{paddingHorizontal: 4}}>
+            <Icon name="edit" size={20} color="#6264A7" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onDeletePress(item.id)}
+            style={{paddingHorizontal: 4}}>
+            <Icon name="delete" size={20} color="#e53935" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      <Image source={{uri: item.image}} style={styles.postImage} />
-      <Text style={styles.content}>{item.content}</Text>
+      {/* Image */}
+      <ImageSlider images={item.images} />
 
+      {/* Description */}
+      <Text style={styles.content}>{displayText}</Text>
+      {isLong && (
+        <Text
+          style={{color: '#6264A7', marginTop: 4}}
+          onPress={() => setExpanded(!expanded)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </Text>
+      )}
+
+      {/* Like & Share */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
+        <TouchableOpacity
+          style={styles.likeButton}
+          onPress={() => setLikes(prev => prev + 1)}>
           <Icon name="thumb-up" size={20} color="#6264A7" />
           <Text style={styles.buttonLabel}>{likes}</Text>
         </TouchableOpacity>
@@ -75,63 +97,134 @@ const PostCard = ({item}: any) => {
           <Text style={styles.buttonLabel}>Share</Text>
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
-export default function MyProfile({heading = 'My Posts'}: {heading?: string}) {
+export default function Feed() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+
+  const loadPosts = async () => {
+    try {
+      const fetchedPosts = await fetchMyPosts(1, 10);
+      setPosts(fetchedPosts);
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPosts();
+    }, [])
+  );
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const confirmDeletePost = (postId: number) => {
+    setSelectedPostId(postId);
+    setDeleteModalVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedPostId) return;
+    setDeleteModalVisible(false);
+    try {
+      const data = await handleDeletePost(selectedPostId);
+      setModalTitle('Success');
+      setModalMessage(data.message || 'Post deleted successfully.');
+      setResultModalVisible(true);
+      await loadPosts();
+    } catch (error: any) {
+      setModalTitle('Error');
+      setModalMessage(error.message || 'Failed to delete post.');
+      setResultModalVisible(true);
+    }
+  };
 
   return (
-    <View style={{flex: 1}}>
+    <View style={{flex: 1, backgroundColor:'#fff'}}>
       <TopBar />
+      <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
 
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
-        </TouchableOpacity>
-        <Text style={styles.heading}>{heading}</Text>
+          onPress={() => navigation.goBack()}
+        />
+        <Heading>Feed</Heading>
       </View>
 
-      <FlatList
-        data={jobPosts}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => <PostCard item={item} />}
-        contentContainerStyle={styles.list}
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#6264A7"
+          style={{marginTop: 20}}
+        />
+      ) : error ? (
+        <Text style={{color: 'red', textAlign: 'center'}}>{error}</Text>
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={(item, index) =>
+            item.id ? item.id.toString() : index.toString()
+          }
+          renderItem={({item}) => (
+            <PostCard
+              item={item}
+              navigation={navigation}
+              onDeletePress={confirmDeletePost}
+            />
+          )}
+          contentContainerStyle={styles.list}
+        />
+      )}
+
+      {/* Confirm Delete Modal */}
+      <CustomModal
+        visible={deleteModalVisible}
+        title="Confirm Delete"
+        message="Are you sure you want to delete this post?"
+        buttonText="Cancel"
+        confirmText="Delete"
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
       />
-      <>
-        <View style={{height: 100, backgroundColor: '#fff'}} />
-        <BottomTabBar />
-      </>
+
+      {/* Result Modal */}
+      <CustomModal
+        visible={resultModalVisible}
+        title={modalTitle}
+        message={modalMessage}
+        buttonText="OK"
+        onClose={() => setResultModalVisible(false)}
+      />
+
+      <View style={{height: 100}} />
+      <BottomTabBar />
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   list: {
     padding: 16,
     backgroundColor: '#fff',
-  },
-  headerLogo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain',
-    marginTop: 10,
-    alignSelf: 'flex-end',
-    padding: 10,
-  },
-  profileButton: {
-    marginRight: 10,
-    padding: 10,
-    borderRadius: 8,
   },
   card: {
     backgroundColor: 'white',
@@ -142,7 +235,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
-    marginTop: 5,
   },
   header: {
     flexDirection: 'row',
@@ -192,12 +284,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6264A7',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-
   backButton: {
     padding: 8,
     borderRadius: 8,
@@ -206,12 +292,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     fontWeight: '600',
-    left: '32%',
+    left: '40%',
   },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    padding: 12,
+    paddingBottom: 8,
     backgroundColor: '#fff',
     borderRadius: 8,
   },

@@ -73,6 +73,7 @@ const AccountScreen = () => {
         const json = JSON.parse(text);
         if (response.ok) {
           console.log('User data fetched successfully:', json.data);
+           await AsyncStorage.setItem('user', String(userData));
           setUserData(json.data);
         } else {
           Alert.alert('Error', json.message || 'Failed to fetch user');

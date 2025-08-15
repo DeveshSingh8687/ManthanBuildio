@@ -47,7 +47,6 @@ HomeScreen: undefined
   JobDetailsScreen: undefined;
   AccountScreen: undefined;
   UserDetailScreen:undefined;
-  TopTabsComponent: undefined;
   JobsSection:undefined;
   JobListComponent:undefined;
   UserScreen: undefined;

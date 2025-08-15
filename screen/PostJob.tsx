@@ -26,20 +26,24 @@ import JobCategoryList from './components/DropDown';
 import TopBar from './components/TopBar';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {fetchUserAddresses} from '../utils/addressApi';
+import {Picker} from '@react-native-picker/picker';
+import ImageCropPicker from 'react-native-image-crop-picker';
+import Heading from './components/CommonHeader';
+import AddressDropdown from './components/AddressComponent';
+import DatePicker from 'react-native-date-picker';
 
-const AddJobScreen = () => {
+
+
+const AddJobScreen = ({route}) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
-  const fields = [
-    'Description',
-    'Requirements',
-    'Job location',
-    'Job position',
-    'Job Status',
-    'Deadline',
-    'Budget',
-  ];
+  const {job, updateJob} = route.params || {};
+  const fields = ['Description', 'Deadline', 'Budget'];
   const [loading, setLoading] = useState(false);
+  const [deadlineDate, setDeadlineDate] = useState<Date | null>(
+    job?.deadline ? new Date(job.deadline) : new Date(),
+  );
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
   const isMultiline = (label: string) =>
     label === 'Description' || label === 'Requirements';
@@ -50,7 +54,49 @@ const AddJobScreen = () => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [image, setImage] = useState<string | null>(null); // To store selected image
   const [imageUris, setImageUris] = useState<string[]>([]);
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
 
+  useEffect(() => {
+    if (updateJob && job) {
+      setFormData({
+        Description: job.description || '',
+        Deadline: job.deadline?.split('T')[0] || '', // format: YYYY-MM-DD
+        Budget: job.budget?.toString() || '',
+      });
+
+      setJobTypeValue(job?.job_type?.id || '');
+      setSelectedAddressId(job?.address?.id || '');
+      // If images exist (currently none), map their URLs
+      if (job.images?.length) {
+        const imageUrls = job?.images.map(img => img); // assuming "url" exists
+        setImageUris(imageUrls);
+      }
+    }
+  }, [updateJob, job]);
+
+  const fetchAddresses = async () => {
+    // setLoading(true);
+
+    try {
+      const result = await fetchUserAddresses(); // this should return { success: boolean, data: [...] }
+
+      if (result.success) {
+        console.log(result);
+        setAddresses(result?.data);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to fetch addresses');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong while fetching addresses');
+      console.error('Fetch Address Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
   const inputRefs = useRef<Array<TextInput | null>>([]);
   const handleImageUpload = () => {
     launchImageLibrary({mediaType: 'photo', quality: 0.5}, response => {
@@ -96,61 +142,71 @@ const AddJobScreen = () => {
   };
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    if (!formData['Description'])
+
+    if (!formData['Description']?.trim()) {
       errors['Description'] = 'Description is required.';
-    if (!formData['Job position'])
-      errors['Job position'] = 'Job position is required.';
+      errors['Budget'] = 'Budget Required';
+      errors['Deadline'] = 'Deadline Required';
+    }
+
+    if (!imageUris.length) {
+      errors['Images'] = 'Please add at least one image.';
+    }
+
     setErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
   const handleSubmit = () => {
     if (!validateForm()) return;
-
-    submitJob(); // Now it uses multipart version
+    submitJob();
   };
 
   const submitJob = async () => {
     const token = await AsyncStorage.getItem('authToken');
-
     setLoading(true);
 
     const formDataToSend = new FormData();
 
     formDataToSend.append('description', formData['Description']);
-    formDataToSend.append('job_type', jobTypeValue);
-    formDataToSend.append('location', formData['Job location'] || '');
-    formDataToSend.append('deadline', formData['Deadline'] || '');
-    formDataToSend.append('budget', formData['Budget'] || '');
+    formDataToSend.append('job_type_id', jobTypeValue); // ✅ match API key
+    formDataToSend.append('address_id', selectedAddressId); // ✅ this must be an integer or string of the selected address
+    formDataToSend.append(
+      'deadline',
+      deadlineDate ? deadlineDate.toISOString().split('T')[0] : '',
+    );
+    formDataToSend.append('budget', formData['Budget']);
 
     imageUris.forEach((uri, index) => {
-      formDataToSend.append('images[]', {
+      formDataToSend.append('images', {
         uri,
         type: 'image/jpeg',
         name: `image_${index}.jpg`,
       });
     });
-
+    const url = updateJob
+      ? `https://buildio.co.nz/api/jobs/update/${job?.id}`
+      : 'https://buildio.co.nz/api/jobs/create';
     try {
-      const response = await fetch('https://buildio.co.nz/api/jobs/update/1', {
+      const response = await fetch(url, {
         method: 'POST',
-        body: formDataToSend,
         headers: {
-          Authorization: `Bearer ${token}`, // 🔐 Use bearer token
-          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`, // No Content-Type because you're sending FormData
         },
+        body: formDataToSend,
       });
-
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert('Success', 'Job updated successfully!');
+        navigation.navigate('JobsSection');
+        setLoading(false);
+        // Alert.alert('Success', 'Job created successfully!');
       } else {
-        throw new Error(data?.message || 'Failed to update job');
+        console.log('Server response:', data);
+        throw new Error(data?.message || 'Failed to create job');
       }
     } catch (error: any) {
-      Alert.alert('Error', error);
-      console.log('Error updating job:', error.message);
+      Alert.alert('Error', error.message || 'Something went wrong');
+      console.error('Error creating job:', error);
     } finally {
       setLoading(false);
     }
@@ -178,24 +234,36 @@ const AddJobScreen = () => {
 
   return (
     <>
- {loading && (
-  <View style={styles.loadingOverlay}>
-    <ActivityIndicator size="large" color="#6264A7" />
-    <Text style={{color: '#6264A7', marginTop: 10}}>
-      Updating profile...
-    </Text>
-  </View>
-)}
+      <DatePicker
+        modal
+        open={isDatePickerVisible}
+        date={deadlineDate || new Date()}
+        mode="date"
+        onConfirm={date => {
+          setDatePickerVisible(false);
+          setDeadlineDate(date);
+        }}
+        onCancel={() => setDatePickerVisible(false)}
+      />
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#6264A7" />
+          <Text style={{color: '#6264A7', marginTop: 10}}>
+            {updateJob ? 'Updating Job' : 'Posting Job'}
+          </Text>
+        </View>
+      )}
       <TopBar />
       <View style={styles.header}>
         <View style={styles.leftSection}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}>
+            // onPress={() => navigation.goBack('')}
+          >
             {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
           </TouchableOpacity>
         </View>
-        <Text style={styles.title}>Post a Job</Text>
+        <Heading>{updateJob ? 'Update Job' : 'Post Job'}</Heading>
       </View>
       <KeyboardAwareScrollView
         contentContainerStyle={{flexGrow: 1}}
@@ -205,6 +273,7 @@ const AddJobScreen = () => {
         showsVerticalScrollIndicator={false}>
         <View style={{flex: 1}}>
           <View style={styles.container}>
+            <JobCategoryList value={jobTypeValue} onChange={setJobTypeValue} />
             {fields.map((label, index) => {
               const multiline = isMultiline(label);
               const isError = !!errors[label];
@@ -221,30 +290,44 @@ const AddJobScreen = () => {
                   {(label === 'Description' || label === 'Requirements') && (
                     <View style={styles.separator} />
                   )}
-                  <TextInput
-                    ref={ref => {
-                      inputRefs.current[index] = ref;
-                    }}
-                    style={[
-                      styles.input,
-                      multiline && styles.textArea,
-                      isError && styles.inputError,
-                    ]}
-                    placeholder="Type..."
-                    placeholderTextColor="#888"
-                    multiline={multiline}
-                    numberOfLines={multiline ? 4 : 1}
-                    textAlignVertical={multiline ? 'top' : 'center'}
-                    value={formData[label] || ''}
-                    onChangeText={text => handleInputChange(label, text)}
-                    returnKeyType={isLast ? 'done' : 'next'}
-                    blurOnSubmit={multiline}
-                    onSubmitEditing={() => {
-                      if (!multiline && !isLast) {
-                        inputRefs.current[index + 1]?.focus();
-                      }
-                    }}
-                  />
+
+                  {label === 'Deadline' ? (
+                    <TouchableOpacity
+                      style={[styles.input, isError && styles.inputError]}
+                      onPress={() => setDatePickerVisible(true)}>
+                      <Text style={{color: deadlineDate ? '#000' : '#888'}}>
+                        {deadlineDate
+                          ? deadlineDate.toDateString()
+                          : 'Select date'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TextInput
+                      ref={ref => {
+                        inputRefs.current[index] = ref;
+                      }}
+                      style={[
+                        styles.input,
+                        multiline && styles.textArea,
+                        isError && styles.inputError,
+                      ]}
+                      placeholder="Type..."
+                      placeholderTextColor="#888"
+                      multiline={multiline}
+                      numberOfLines={multiline ? 4 : 1}
+                      textAlignVertical={multiline ? 'top' : 'center'}
+                      value={formData[label] || ''}
+                      onChangeText={text => handleInputChange(label, text)}
+                      returnKeyType={isLast ? 'done' : 'next'}
+                      blurOnSubmit={multiline}
+                      onSubmitEditing={() => {
+                        if (!multiline && !isLast) {
+                          inputRefs.current[index + 1]?.focus();
+                        }
+                      }}
+                    />
+                  )}
+
                   {isError && (
                     <Text style={styles.errorText}>{errors[label]}</Text>
                   )}
@@ -252,7 +335,28 @@ const AddJobScreen = () => {
               );
             })}
 
-            <JobCategoryList value={jobTypeValue} onChange={setJobTypeValue} />
+            {/* <View style={styles.inputCard}> */}
+            {/* <Text style={styles.label}>Select Address</Text>
+              <View style={styles.dropdownWrapper}>
+                <Picker
+                  selectedValue={selectedAddressId}
+                  onValueChange={value => setSelectedAddressId(value)}
+                  style={styles.picker}>
+                  <Picker.Item label="Select an address" value={null} />
+                  {addresses.map(addr => (
+                    <Picker.Item
+                      key={addr.id}
+                      label={`${addr.label} (${addr.building})`}
+                      value={addr.id.toString()} // or just addr.id if using number
+                    />
+                  ))}
+                </Picker>
+              </View> */}
+            <AddressDropdown
+              value={selectedAddressId} // current selected address id
+              onChange={setSelectedAddressId} // updates state when user picks
+            />
+            {/* </View> */}
 
             <View style={styles.inputCard}>
               <Text style={styles.label}>Add image</Text>
@@ -268,16 +372,28 @@ const AddJobScreen = () => {
                   <Icon name="photo-library" size={22} color="white" />
                 </TouchableOpacity>
               </View>
+              {/* Error message for images */}
+              {errors['Images'] && (
+                <Text style={{color: 'red', marginTop: 5}}>
+                  {errors['Images']}
+                </Text>
+              )}
 
-              {imageUris.length > 0 && (
-                <View style={{marginTop: 10}}>
-                  {imageUris.map((uri, index) => (
+              {imageUris?.length > 0 && (
+                <View
+                  style={{
+                    marginTop: 10,
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                  }}>
+                  {imageUris?.map((uri, index) => (
                     <View key={index} style={{marginBottom: 10}}>
                       <Image
                         source={{uri}}
                         style={{
-                          width: '100%',
-                          height: 200,
+                          width: 100, // fixed width
+                          height: 100,
                           borderRadius: 10,
                         }}
                         resizeMode="cover"
@@ -295,7 +411,10 @@ const AddJobScreen = () => {
             <TouchableOpacity
               style={styles.submitButton}
               onPress={handleSubmit}>
-              <Text style={styles.submitText}>Post Job</Text>
+              <Text style={styles.submitText}>
+                {' '}
+                {updateJob ? 'Update Job' : 'Post Job'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -310,7 +429,7 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-    loadingOverlay: {
+  loadingOverlay: {
     position: 'absolute',
     top: 0,
     bottom: 0,
@@ -337,7 +456,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-  marginTop: 10,
+    marginTop: 10,
     fontSize: 14,
     fontWeight: '600',
     left: '32%',
@@ -421,6 +540,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  dropdownWrapper: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginTop: 8,
+    backgroundColor: '#fff',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    color: '#000',
   },
 });
 

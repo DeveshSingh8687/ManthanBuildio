@@ -73,6 +73,7 @@ const AddressForm = () => {
           ...prev,
           latitude,
           longitude,
+          map_Text: address || '',
         }));
 
         setLoadingLocation(false);
@@ -137,7 +138,7 @@ const AddressForm = () => {
     setLoading(true);
     const payload = {
       ...addressForm,
-      label: typeof addressForm.label === 'string' ? addressForm.label : '',
+      map_Text: typeof addressForm.map_Text === 'string' ? addressForm.map_Text : '',
       lat: location?.latitude ? String(location.latitude) : '',
       long: location?.longitude ? String(location.longitude) : '',
     };
@@ -265,7 +266,7 @@ const AddressForm = () => {
 
                     setAddressForm(prev => ({
                       ...prev,
-                      mapText: address, // Optional: You could use this or keep it separate
+                      map_Text: address,   // Optional: You could use this or keep it separate
                       latitude,
                       longitude,
                     }));

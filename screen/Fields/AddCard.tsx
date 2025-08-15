@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import TopBar from '../components/TopBar';
 import BottomTabBar from '../components/BottomNavigaionBar';
+import Heading from '../components/CommonHeader';
 
 type Props = {
   navigation: {
@@ -95,7 +96,7 @@ const ManagePaymentMethodsScreen = ({navigation}: Props) => {
             style={styles.backButton}>
             {/* <Ionicons name="arrow-back" size={24} color="#6264A7" /> */}
           </TouchableOpacity>
-          <Text style={styles.title}>Manage payment methods</Text>
+          <Heading>Manage Payment Method</Heading>
         </View>
 
         <TouchableOpacity style={styles.row}>
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   title: {
-   marginTop: 10,
+    marginTop: 10,
     fontSize: 14,
     fontWeight: '600',
     left: '28%',

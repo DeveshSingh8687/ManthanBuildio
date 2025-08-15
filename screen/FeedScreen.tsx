@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   FlatList,
   View,
@@ -6,65 +6,87 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useNavigation} from '@react-navigation/native';
-import {NavigationProp} from '@react-navigation/native';
+import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import {NavPopup} from './components/Modal';
 import TopBar from './components/TopBar';
-// test rj
-const jobPosts = [
-  {
-    id: '1',
-    user: 'Gabie Sheber',
-    date: 'Jan. 02, 2024',
-    image:
-      'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=800&q=60',
-    content:
-      'Just finished this challenging but rewarding renovation project. Loved the transformation!',
-  },
-  {
-    id: '2',
-    user: 'John Smith',
-    date: 'Jan. 02, 2024',
-    image: 'https://randomuser.me/api/portraits/men/1.jpg',
-    content:
-      'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-  },
-  {
-    id: '3',
-    user: 'Gabie Sheber',
-    date: 'Jan. 02, 2024',
-    image:
-      'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=800&q=60',
-    content:
-      'Hiring experienced carpenters and roofers for our upcoming project. Apply today!',
-  },
-];
+import {fetchPosts} from '../utils/fetchPosts';
+import Heading from './components/CommonHeader';
+import ImageSlider from './components/ImageSlider';
 
-const PostCard = ({item}: {item: any}) => {
+
+const PostCard = ({item, navigation}: any) => {
   const [likes, setLikes] = useState(0);
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [expanded, setExpanded] = useState(false);
+
+  const descriptionWords = item.description
+    ? item.description.split(/\s+/)
+    : [];
+  const isLong = descriptionWords.length > 20;
+  const displayText = expanded
+    ? item.description
+    : descriptionWords.slice(0, 20).join(' ') + (isLong ? '...' : '');
 
   return (
-    <TouchableOpacity style={styles.card}>
+    <View style={styles.card}>
+      {/* Header */}
       <View style={styles.header}>
         <Image
-          source={{uri: 'https://randomuser.me/api/portraits/women/65.jpg'}}
+          source={{
+            uri: item.user?.profile_picture || 'https://via.placeholder.com/50',
+          }}
           style={styles.avatar}
         />
-        <View>
-          <Text style={styles.name}>{item.user}</Text>
-          <Text style={styles.date}>{item.date}</Text>
+        <View style={{flex: 1}}>
+          <Text style={styles.name}>
+            {item.user?.first_name} {item.user?.last_name}
+          </Text>
+          <Text style={styles.date}>
+            {new Date(item.createdAt).toLocaleDateString()}
+          </Text>
         </View>
+
+        {/* Edit & Delete Icons */}
+        {/* <View style={{flexDirection: 'row'}}>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('AddPostScreen', {
+                updateFeed: true, // boolean, not string
+                item: item, // pass the current item
+              })
+            }
+            style={{paddingHorizontal: 4}}>
+            <Icon name="edit" size={20} color="#6264A7" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => console.log('Delete pressed', item.id)}
+            style={{paddingHorizontal: 4}}>
+            <Icon name="delete" size={20} color="#e53935" />
+          </TouchableOpacity>
+        </View> */}
       </View>
 
-      <Image source={{uri: item.image}} style={styles.postImage} />
-      <Text style={styles.content}>{item.content}</Text>
+      {/* Image */}
+      {/* {item.images?.length > 0 && (
+        <Image source={{uri: item.images[0]}} style={styles.postImage} />
+      )} */}
+      <ImageSlider images={item.images} />
 
+      {/* Description with Show more/less */}
+      <Text style={styles.content}>{displayText}</Text>
+      {isLong && (
+        <Text
+          style={{color: '#6264A7', marginTop: 4}}
+          onPress={() => setExpanded(!expanded)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </Text>
+      )}
+
+      {/* Like & Share */}
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={styles.likeButton}
@@ -77,50 +99,66 @@ const PostCard = ({item}: {item: any}) => {
           <Text style={styles.buttonLabel}>Share</Text>
         </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
 export default function Feed() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [modalVisible, setModalVisible] = React.useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true); // start as loading
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const fetchedPosts = await fetchPosts(1, 10); // pass page & limit if needed
+        setPosts(fetchedPosts);
+      } catch (err: any) {
+        setError(err.message || 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPosts();
+  }, []);
 
   return (
     <View style={{flex: 1}}>
-      {/* Header with logo and profile */}
-      {/* <View style={styles.headerLogo}>
-        <Image
-          source={require('../assets/asset_logo.png')}
-          style={styles.logo}
-        />
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => setModalVisible(true)}>
-          <Icon name="person-outline" size={24} />
-        </TouchableOpacity>
-      </View> */}
-      <TopBar/>
+      <TopBar />
       <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
 
-      {/* Back button and heading */}
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
-        </TouchableOpacity>
-        <Text style={styles.heading}>Feed</Text>
+          onPress={() => navigation.goBack()}
+        />
+        <Heading>Feed</Heading>
       </View>
 
-      {/* Feed */}
-      <FlatList
-        data={jobPosts}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => <PostCard item={item} />}
-        contentContainerStyle={styles.list}
-      />
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#6264A7"
+          style={{marginTop: 20}}
+        />
+      ) : error ? (
+        <Text style={{color: 'red', textAlign: 'center'}}>{error}</Text>
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={(item, index) =>
+            item.id ? item.id.toString() : index.toString()
+          }
+          renderItem={({item}) => (
+            <PostCard item={item} navigation={navigation} />
+          )}
+          contentContainerStyle={styles.list}
+        />
+      )}
 
-      {/* Bottom navigation */}
       <View style={{height: 100}} />
       <BottomTabBar />
     </View>
@@ -131,25 +169,6 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     backgroundColor: '#fff',
-  },
-  headerLogo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain',
-    marginTop: 10,
-    alignSelf: 'flex-end',
-    padding: 10,
-  },
-  profileButton: {
-    marginRight: 10,
-    padding: 10,
-    borderRadius: 8,
   },
   card: {
     backgroundColor: 'white',
@@ -209,44 +228,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6264A7',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  viewMoreButton: {
-    backgroundColor: '#f2f2f2',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
-    alignItems: 'center',
-  },
-  viewMoreButtonText: {
-    color: '#6264A7',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  applyButton: {
-    backgroundColor: '#6264A7',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    flex: 1,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
   backButton: {
     padding: 8,
     borderRadius: 8,
   },
   heading: {
-  marginTop: 10,
+    marginTop: 10,
     fontSize: 14,
     fontWeight: '600',
     left: '40%',
@@ -254,7 +241,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    padding: 12,
+    paddingBottom: 8,
     backgroundColor: '#fff',
     borderRadius: 8,
   },

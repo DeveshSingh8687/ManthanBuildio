@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Ima
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import TopBar from '../components/TopBar';
 import BottomTabBar from '../components/BottomNavigaionBar';
+import Heading from '../components/CommonHeader';
 const aboutData = {
     "title": "About Us",
     "content": "Lorem ipsum dolor sit amet consectetur. Nibh lobortis id pellentesque blandit. Sit praesent ornare eget pretium suspendisse a sagittis amet ac. Pulvinar gravida velit aliquet nulla arcu. Platea gravida amet rutrum quam phasellus hac eu aliquam. Proin sit laoreet eu dapibus curabitur elit. Integer non tempus malesuada nibh id lectus ut. Lorem ipsum dolor sit amet consectetur. Nibh lobortis id pellentesque blandit. Sit praesent ornare eget pretium suspendisse a sagittis amet ac. Pulvinar gravida velit aliquet nulla arcu. Platea gravida amet rutrum quam phasellus hac eu aliquam. Proin sit laoreet eu dapibus curabitur elit. Integer non tempus malesuada nibh id lectus ut.",
@@ -21,7 +22,7 @@ const AboutUsScreen = ({ navigation }:Props) => {
               <TouchableOpacity onPress={() => navigation.goBack()}>
                   {/* <Ionicons name="arrow-back" size={24} color="#6264A7" style={styles.backButton} /> */}
               </TouchableOpacity>
-              <Text style={styles.headerText}>{aboutData.title}</Text>
+              <Heading>{aboutData.title}</Heading>
           </View>
 
           {/* Scrollable Content */}

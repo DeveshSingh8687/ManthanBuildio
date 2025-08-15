@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
 import BottomTabBar from '../components/BottomNavigaionBar';
 import CustomModal from '../components/CustomModal';
+import Heading from '../components/CommonHeader';
 
 export default function ResetPassword() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -82,7 +83,7 @@ export default function ResetPassword() {
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
               </TouchableOpacity>
-              <Text style={styles.heading}>Reset Password</Text>
+                 <Heading>Reset Password</Heading>
             </View>
 
             <TextInput

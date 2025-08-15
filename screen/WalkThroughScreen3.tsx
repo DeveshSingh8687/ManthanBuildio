@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/Navigation';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../navigation/Navigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { height } = Dimensions.get('window');
+const {height} = Dimensions.get('window');
 
 type WelcomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -22,34 +23,32 @@ export default function WelcomeScreen3() {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
   const [isPressed, setIsPressed] = useState(false);
 
-  const handlePress = () => {
+  const handlePress = async () => {
     navigation.navigate('HomeScreen');
+    await AsyncStorage.setItem('prefs:hasSeenIntro', 'true');
   };
 
   return (
     <View style={styles.container}>
-       <Text style={styles.heading}>Welcome to Buildio</Text>
+      <Text style={styles.heading}>Welcome to Buildio</Text>
       <Text style={styles.subheading}>
         Find Work or Post Projects in the Construction Industry
       </Text>
       <Image
-         source={require('../assets/walkthrough3.png')}
+        source={require('../assets/walkthrough3.png')}
         style={styles.image}
       />
-
-     
 
       <Pressable
         onPress={handlePress}
         onPressIn={() => setIsPressed(true)}
         onPressOut={() => setIsPressed(false)}
-        style={({ pressed }) => [
+        style={({pressed}) => [
           styles.button,
           {
             backgroundColor: pressed || isPressed ? '#6264A7' : '#E0E0E0',
           },
-        ]}
-      >
+        ]}>
         <Text style={styles.buttonText}>Next</Text>
       </Pressable>
     </View>

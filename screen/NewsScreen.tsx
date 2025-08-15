@@ -8,22 +8,47 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator, // Import ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import {RootStackParamList} from '../navigation/Navigation';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import BottomTabBar from './components/BottomNavigaionBar';
-import {NavPopup} from './components/Modal';
 import TopBar from './components/TopBar';
 
-const NewsScreen = ({item}: any) => {
+const NewsCard = ({item}: any) => {
+  const [expanded, setExpanded] = useState(false);
+  const descriptionWords = item.description
+    ? item.description.split(/\s+/)
+    : [];
+
+  const isLong = descriptionWords.length > 20;
+  const displayText = expanded
+    ? item.description
+    : descriptionWords.slice(0, 20).join(' ') + (isLong ? '...' : '');
   return (
     <View style={styles.postCard}>
-      <Image source={{uri: item.image}} style={styles.postImage} />
-      <Text style={styles.postText}>{item.text}</Text>
+      {item.images?.[0] && (
+        <Image source={{uri: item.images[0]}} style={styles.postImage} />
+      )}
+      {/* Description */}
+      <Text style={styles.postText}>{displayText}</Text>
+
+      {isLong && (
+        <Text
+          style={{color: '#6264A7', marginTop: 4}}
+          onPress={() => setExpanded(!expanded)}>
+          {expanded ? 'Show less' : 'Show more'}
+        </Text>
+      )}
       <View style={styles.userRow}>
+        <Image
+          source={{
+            uri: item.user?.profile_picture || 'https://via.placeholder.com/30',
+          }}
+          style={{width: 24, height: 24, borderRadius: 12, marginRight: 6}}
+        />
         <Text style={styles.userText}>
-          By {item.user} • {item.date}
+          By {item.user?.first_name} {item.user?.last_name} •{' '}
+          {new Date(item.createdAt).toLocaleDateString()}
         </Text>
       </View>
     </View>
@@ -44,63 +69,55 @@ export default function NewsFeed({
   limit?: number;
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [modalVisible, setModalVisible] = React.useState(false);
   const [jobPosts, setJobPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true); // Loading state
-  const limitedPosts = jobPosts.slice(0, limit);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch data from the API
   useEffect(() => {
-    fetch('https://6821d085b342dce8004be96b.mockapi.io/buildio/home/home')
+    fetch('https://buildio.co.nz/api/news/list?page=1&limit=10', {
+      headers: {
+        Authorization:
+          'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJyYWppbmRlckBleGFtcGxlLmNvbSIsImlhdCI6MTc1NDgyNzg2MiwiZXhwIjoxNzU1NDMyNjYyfQ.us1M3wpV900mfHMFBqA67vwmhXS1AI1uu2g2NknmB58',
+      },
+    })
       .then(response => response.json())
       .then(data => {
-        setJobPosts(data); // Set the fetched data to the jobPosts state
-        setLoading(false); // Set loading to false once data is loaded
+        setJobPosts(data?.data?.data || []);
+        setLoading(false);
       })
       .catch(error => {
         console.error('Error fetching job posts:', error);
-        setLoading(false); // Set loading to false in case of an error
+        setLoading(false);
       });
   }, []);
+
+  const limitedPosts = showBackButton ? jobPosts : jobPosts.slice(0, limit);
 
   return (
     <View style={styles.container}>
       {loading ? (
-        // Show loader only when data is loading
         <ActivityIndicator size="large" color="#6264A7" style={styles.loader} />
       ) : (
         <>
-          {showHeading && (
-            <>
-              <TopBar />
-              <ScrollView style={styles.container}></ScrollView>
-            </>
-          )}
+          {showHeading && <TopBar />}
 
-          {/* Top Bar */}
           <View style={styles.topBar}>
             {showBackButton && (
               <TouchableOpacity
                 style={styles.backButton}
-                onPress={() => {
-                  navigation.goBack();
-                }}>
-                {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
-              </TouchableOpacity>
+                onPress={() => navigation.goBack()}
+              />
             )}
             {showHeading && <Text style={styles.heading}>{heading}</Text>}
           </View>
 
-          {/* Main Content */}
           <FlatList
-            data={showBackButton ? jobPosts : limitedPosts}
+            data={limitedPosts}
             keyExtractor={item => String(item.id)}
-            renderItem={({item}) => <NewsScreen item={item} />}
+            renderItem={({item}) => <NewsCard item={item} />}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
           />
 
-          {/* Bottom Bar */}
           {showHeading && <View style={{height: 100}} />}
           {showHeading && <BottomTabBar />}
         </>
@@ -110,58 +127,20 @@ export default function NewsFeed({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-  },
-  profileButton: {marginRight: 10, padding: 10, borderRadius: 8},
-  backButton: {
-    // marginTop: 10,
-    padding: 8,
-    marginRight: 10,
-    borderRadius: 8,
-  },
-  heading: {
-    // marginTop: 10,
-    fontSize: 20,
-     fontWeight: '700',
-    color: '#6264A7',
-  },
-  list: {
-    padding: 10,
-  },
+  container: {flex: 1, backgroundColor: '#fff'},
+  topBar: {flexDirection: 'row', alignItems: 'center', padding: 10},
+  backButton: {padding: 8, marginRight: 10, borderRadius: 8},
+  heading: {fontSize: 20, fontWeight: '700', color: '#6264A7'},
+  list: {padding: 10},
   postCard: {
     marginBottom: 10,
     backgroundColor: '#f9f9f9',
     padding: 12,
     borderRadius: 10,
   },
-  postImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 10,
-  },
-  postText: {
-    marginTop: 10,
-    fontSize: 14,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  userText: {
-    fontSize: 12,
-    color: '#777',
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  postImage: {width: '100%', height: 150, borderRadius: 10},
+  postText: {marginTop: 10, fontSize: 14},
+  userRow: {flexDirection: 'row', alignItems: 'center', marginTop: 8},
+  userText: {fontSize: 12, color: '#777'},
+  loader: {flex: 1, justifyContent: 'center', alignItems: 'center'},
 });

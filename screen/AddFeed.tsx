@@ -9,21 +9,26 @@ import {
   Platform,
   Keyboard,
   PermissionsAndroid,
-  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import {Icon} from 'react-native-elements';
 import TopBar from './components/TopBar';
 import BottomTabBar from './components/BottomNavigaionBar';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-import {NavigationProp, useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const {height: SCREEN_HEIGHT} = Dimensions.get('window');
+import Heading from './components/CommonHeader';
+import CustomModal from './components/CustomModal';
 
 const AddPostScreen = () => {
+  const route = useRoute();
   const navigation = useNavigation();
+  const {updateFeed, item } = route.params as {
+    updateFeed?: boolean;
+    item?: any;
+  }; 
+
 
   const [postTitle, setPostTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -33,19 +38,118 @@ const AddPostScreen = () => {
   }>({});
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [imageUris, setImageUris] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [fullName, setFullName] = useState('');
+  useEffect(() => {
+    if (updateFeed && item) {
+      // Pre-fill form fields
+      setPostTitle(item?.title || '');
+      setDescription(item?.description || '');
+
+      // Pre-fill images (if API returns URLs)
+      if (item?.images && Array.isArray(item.images)) {
+        setImageUris(item.images.map((img: {url: any}) => img.url)); // adjust if key name is different
+      }
+    }
+  }, [updateFeed, item]);
+
+  // Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    title: '',
+    message: '',
+    buttonText: 'OK',
+    onClose: () => setModalVisible(false),
+  });
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
-    });
-
+    const showSub = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false),
+    );
     return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
+      showSub.remove();
+      hideSub.remove();
     };
+  }, []);
+  const handlePost = async () => {
+    if (!validate()) return;
+
+    setLoading(true);
+
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const formData = new FormData();
+      formData.append('title', postTitle);
+      formData.append('description', description);
+
+      imageUris.forEach((uri, index) => {
+        // Only append new images (local ones, not already hosted)
+        if (uri && typeof uri === 'string' && !uri.startsWith('http')) {
+          const fileName = uri.split('/').pop() || `image_${index}.jpg`;
+          formData.append('images', {
+            uri,
+            type: 'image/jpeg',
+            name: fileName,
+          } as any);
+        }
+      });
+
+      let url = `https://buildio.co.nz/api/posts/create`;
+      if (updateFeed && item?.id) {
+        url = `https://buildio.co.nz/api/posts/update/${item.id}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      console.log('API Response:', result);
+
+      if (!response.ok) {
+        throw new Error(result?.message || 'Request failed');
+      }
+
+      showModal(
+        'Success',
+        updateFeed
+          ? 'Your post has been updated successfully!'
+          : 'Your post has been created successfully!',
+        'OK',
+        () => {
+          setModalVisible(false);
+          navigation.goBack();
+        },
+      );
+    } catch (error: any) {
+      console.error('❌ Error:', error.message);
+      showModal('Error', error.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadName = async () => {
+      try {
+        const first = await AsyncStorage.getItem('firstName');
+        const last = await AsyncStorage.getItem('lastName');
+        const user= await AsyncStorage.getItem('user')
+        console.log(user)
+        setFullName(`${first || ''} ${last || ''}`);
+      } catch (e) {
+        console.error('Error loading name:', e);
+      }
+    };
+    loadName();
   }, []);
 
   const validate = () => {
@@ -56,125 +160,114 @@ const AddPostScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePostTitleChange = (text: string) => {
-    setPostTitle(text);
-    if (text.trim()) {
-      setErrors(prevErrors => ({...prevErrors, postTitle: undefined}));
-    }
-  };
-
-  const handleDescriptionChange = (text: string) => {
-    setDescription(text);
-    if (text.trim()) {
-      setErrors(prevErrors => ({...prevErrors, description: undefined}));
-    }
-  };
-
-  const onPost = () => {
-    if (validate()) {
-      setPostTitle('');
-      setDescription('');
-      setErrors({});
-      setImageUris([]);
-    }
-  };
-
   const handleCamera = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'This app needs camera access to take pictures.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        },
       );
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
     }
-
-    launchCamera({mediaType: 'photo', saveToPhotos: true}, response => {
-      if (response.didCancel || response.errorCode) return;
-
-      if (response.assets && response.assets.length > 0) {
-        const newUris = response.assets
-          .map(asset => asset.uri)
-          .filter(uri => uri !== undefined) as string[];
-
-        setImageUris(prevUris => [...prevUris, ...newUris]);
+    launchCamera({mediaType: 'photo'}, response => {
+      if (response.assets) {
+        const uris = response.assets.map(a => a.uri!).filter(Boolean);
+        setImageUris(prev => [...prev, ...uris]);
       }
     });
   };
-  const [fullName, setFullName] = useState('');
-
-  useEffect(() => {
-    const loadName = async () => {
-      try {
-        const first = await AsyncStorage.getItem('firstName');
-        const last = await AsyncStorage.getItem('lastName');
-        console.log('Got from storage:', first, last);
-        setFullName(`${first || ''} ${last || ''}`);
-      } catch (e) {
-        console.error('Error loading name:', e);
-      }
-    };
-
-    loadName();
-  }, []); // Runs once when the component mounts
-
-  useEffect(() => {
-    if (fullName) {
-      console.log(fullName, 'updated full name'); // ✅ This runs whenever fullName changes
-    }
-  }, [fullName]);
 
   const handleLaunchGallery = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        selectionLimit: 0, // 🔥 Allows multiple image selection
-      },
-      response => {
-        if (response.didCancel) return;
-        if (response.errorCode) {
-          console.log('Gallery error:', response.errorMessage);
-        } else if (response.assets && response.assets.length > 0) {
-          const selectedUris = response.assets
-            .map(asset => asset.uri)
-            .filter(uri => uri !== undefined) as string[];
+    launchImageLibrary({mediaType: 'photo', selectionLimit: 0}, response => {
+      if (response.assets) {
+        const uris = response.assets.map(a => a.uri!).filter(Boolean);
+        setImageUris(prev => [...prev, ...uris]);
+      }
+    });
+  };
 
-          setImageUris(prevUris => [...prevUris, ...selectedUris]);
-        }
-      },
-    );
+  const removeImage = (index: number) => {
+    setImageUris(prev => prev.filter((_, i) => i !== index));
   };
-  const removeImage = (indexToRemove: number) => {
-    setImageUris(prevUris =>
-      prevUris.filter((_, index) => index !== indexToRemove),
-    );
+
+  const showModal = (
+    title: string,
+    message: string,
+    buttonText = 'OK',
+    onClose?: () => void,
+  ) => {
+    setModalConfig({
+      title,
+      message,
+      buttonText,
+      onClose: onClose || (() => setModalVisible(false)),
+    });
+    setModalVisible(true);
   };
+
+  // const handlePost = async () => {
+  //   if (!validate()) return;
+
+  //   setLoading(true);
+
+  //   try {
+  //     const token = await AsyncStorage.getItem('authToken');
+  //     const formData = new FormData();
+  //     formData.append('title', postTitle);
+  //     formData.append('description', description);
+
+  //     imageUris.forEach((uri, index) => {
+  //       const fileName = uri.split('/').pop() || `image_${index}.jpg`;
+  //       formData.append('images', {
+  //         uri,
+  //         type: 'image/jpeg',
+  //         name: fileName,
+  //       } as any);
+  //     });
+
+  //     const response = await fetch(`https://buildio.co.nz/api/posts/create`, {
+  //       method: 'POST',
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //         'Content-Type': 'multipart/form-data',
+  //       },
+  //       body: formData,
+  //     });
+
+  //     const result = await response.json();
+  //     console.log('Post API Response:', result);
+
+  //     if (!response.ok) {
+  //       throw new Error(result?.message || 'Failed to create post');
+  //     }
+
+  //     // Reset form after success
+  //     setPostTitle('');
+  //     setDescription('');
+  //     setImageUris([]);
+  //     showModal('Success', 'Your post has been created successfully!', 'OK', () => {
+  //       setModalVisible(false);
+  //       navigation.goBack();
+  //     });
+
+  //   } catch (error: any) {
+  //     console.error('❌ Post creation error:', error.message);
+  //     showModal('Error', error.message || 'Something went wrong');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   return (
     <>
       <TopBar />
       <View style={styles.wrapper}>
         <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContainer}
-          enableOnAndroid={true}
-          extraScrollHeight={Platform.OS === 'ios' ? 100 : 60}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+          enableOnAndroid
+          keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => navigation.goBack()}>
-                  {/* <Icon name="arrow-back" size={24} color="#6264A7" /> */}
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Add Post</Text>
-              </View>
+              <Heading>Add Post</Heading>
             </View>
 
             {/* Profile Info */}
@@ -196,7 +289,7 @@ const AddPostScreen = () => {
                 style={[styles.input, errors.postTitle && styles.inputError]}
                 placeholder="Write the title of your post here"
                 value={postTitle}
-                onChangeText={handlePostTitleChange}
+                onChangeText={setPostTitle}
               />
               {errors.postTitle && (
                 <Text style={styles.errorText}>{errors.postTitle}</Text>
@@ -214,9 +307,8 @@ const AddPostScreen = () => {
                 ]}
                 placeholder="What do you want to talk about?"
                 value={description}
-                onChangeText={handleDescriptionChange}
+                onChangeText={setDescription}
                 multiline
-                numberOfLines={4}
               />
               {errors.description && (
                 <Text style={styles.errorText}>{errors.description}</Text>
@@ -231,11 +323,7 @@ const AddPostScreen = () => {
                     <Image source={{uri}} style={styles.imagePreview} />
                     <TouchableOpacity
                       style={styles.removeButton}
-                      onPress={() => {
-                        const newUris = [...imageUris];
-                        newUris.splice(index, 1);
-                        setImageUris(newUris);
-                      }}>
+                      onPress={() => removeImage(index)}>
                       <Icon name="close" size={20} color="white" />
                     </TouchableOpacity>
                   </View>
@@ -258,18 +346,35 @@ const AddPostScreen = () => {
             </View>
 
             {/* Post Button */}
-            <TouchableOpacity style={styles.postButton} onPress={onPost}>
-              <Text style={styles.postButtonText}>Post</Text>
+            <TouchableOpacity
+              style={styles.postButton}
+              onPress={handlePost}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.postButtonText}>Post</Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAwareScrollView>
       </View>
 
-      {/* Conditional Bottom Tab */}
+      {/* Custom Modal */}
+      <CustomModal
+        visible={modalVisible}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        buttonText={modalConfig.buttonText}
+        onClose={modalConfig.onClose}
+      />
+
       {!keyboardVisible && <BottomTabBar />}
     </>
   );
 };
+
+export default AddPostScreen;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -405,5 +510,3 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 });
-
-export default AddPostScreen;

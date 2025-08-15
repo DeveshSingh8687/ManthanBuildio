@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
 import PostFeed from '../PickJob';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   NavigationProp,
   useFocusEffect,
@@ -20,12 +19,36 @@ import {
 import {RootStackParamList} from '../../navigation/Navigation';
 import {NavPopup} from './Modal';
 import TopBar from './TopBar';
+import {fetchMyJobs, getAppliedJobs} from '../../utils/fetchJobs';
 
 const Tab = createMaterialTopTabNavigator();
 
 export default function TopTabsComponent() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = React.useState(false);
+  const [myJobs, setMyJobs] = useState([]);
+  const [appliedJobs, setAppliedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const loadJobs = async () => {
+      setLoading(true);
+      const result = await fetchMyJobs();
+      if (result.success) {
+        const jobs = result.data;
+
+        // Filter based on how your API marks applied vs. created jobs
+        // console.log(jobs,jobs);
+
+        setMyJobs(jobs);
+        // setAppliedJobs(appliedJobsList);
+      } else {
+        console.warn('Error loading jobs:', result.error);
+      }
+      setLoading(false);
+    };
+
+    loadJobs();
+  }, []);
   useFocusEffect(
     useCallback(() => {
       setModalVisible(false);
@@ -33,31 +56,29 @@ export default function TopTabsComponent() {
       // On focus, close the modal
     }, []),
   );
+
+    useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const data = await getAppliedJobs();
+        setAppliedJobs(data?.data || []);
+      } catch (error) {
+        console.log('Failed to load jobs');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []);
+  console.log(appliedJobs,'applied jobs')
+    console.log(myJobs,'myJobs')
+
+ 
   return (
     <>
-      {/* <View style={styles.headerLogo}>
-      <Image
-        source={require('../../assets/asset_logo.png')}
-        style={styles.logo}
-      />
-      <TouchableOpacity
-        style={styles.profileButton}
-        onPress={() => setModalVisible(true)}>
-        <Icon name="person-outline" size={24} />
-      </TouchableOpacity>
-    </View> */}
       <TopBar />
       <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
-
-      {/* Back Button */}
-      {/* <View style={styles.backButtonContainer}>
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}>
-        <Icon name="arrow-back" size={24} color="#000" />
-        <Text style={styles.backButtonText}>Jobs</Text>
-      </TouchableOpacity>
-    </View> */}
 
       {/* Tab Section */}
       <View style={styles.container}>
@@ -86,10 +107,12 @@ export default function TopTabsComponent() {
             name="My Jobs"
             children={() => (
               <PostFeed
+                key={`my-jobs-${myJobs.length}`}
                 showButtonText="Applications"
                 showBottomBar={true}
                 showHeader={false}
                 showBackButton={false}
+                myJobs={myJobs}
               />
             )}
           />
@@ -101,6 +124,7 @@ export default function TopTabsComponent() {
                 showBottomBar={true}
                 showHeader={false}
                 showBackButton={false}
+                myJobs ={appliedJobs}
               />
             )}
           />

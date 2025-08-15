@@ -1,132 +1,330 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet, Platform } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Platform,
+} from 'react-native';
+import MapView, {Marker} from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
+import {
+  NavigationProp,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import CustomModal from './components/CustomModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {handleApply} from '../utils/fetchJobs';
 
-const jobData = {
-  Name: 'Carpenter (Cabinetry Specialist)',
-  imageUrl: 'https://i.pravatar.cc/100',
-  description:
-    'Seeking a highly skilled carpenter with expertise in custom cabinetry. Experience with design, fabrication, and installation is essential.',
-  requirements: [
-    'Read and interpret blueprints, schematics, and technical drawings.',
-    'Accurately measure, cut, and assemble cabinet components.',
-    'Install cabinets with precision and attention to detail.',
-    'Finish cabinets with a high level of quality (e.g., staining, painting, varnishing).',
-    'Operate various woodworking machinery and hand tools safely and efficiently.',
-  ],
-  location: 'Auckland, New Zealand',
-  coords: { latitude: -36.8485, longitude: 174.7633 },
-  info: {
-    'Job Position': 'Carpenter(Cabinetry Specialist)',
-    'Job Type': ['Full-Time', 'Remote', 'Contract'],
-    'Job Status': 'Active',
-    'Experience': '5 Years',
-    'Deadline': 'Project Completion Date: 2023-12-31',
-    'Budget': 'E$40 -$50 per hour',
-  },
-};
+const JobDetailsScreen = ({route, navigation}) => {
+  const BASE_URL = 'https://buildio.co.nz/api';
 
-const JobDetailsScreen = ({ navigation }) => {
-  const [region] = React.useState({
-    latitude: jobData.coords.latitude,
-    longitude: jobData.coords.longitude,
+  const {job, updateJob} = route.params;
+  console.log(job);
+  // const navigation = useNavigation();
+  const [deleteModalVisible, setDeleteModalVisible] = React.useState(false);
+  const [resultModalVisible, setResultModalVisible] = React.useState(false);
+  const [modalMessage, setModalMessage] = React.useState('');
+  const [modalTitle, setModalTitle] = React.useState('');
+  const [showFullDescription, setShowFullDescription] = React.useState(false);
+  console.log(updateJob,'updateJob')
+
+  const descriptionText = job?.description || '';
+  const isLongDescription = descriptionText.length > 100;
+  const displayedText = showFullDescription
+    ? descriptionText
+    : descriptionText.slice(0, 100) + (isLongDescription ? '...' : '');
+
+  const region = {
+    latitude: parseFloat(job?.address?.lat || '0'),
+    longitude: parseFloat(job?.address?.long || '0'),
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
-  });
+  };
 
-  // const navigation = useNavigation();
+  const handleDelete = async () => {
+    try {
+      setDeleteModalVisible(false); // close confirmation modal
+
+      console.log('🗑️ Deleting job:', job.job_id || job.id);
+
+      const token = await AsyncStorage.getItem('authToken');
+      const response = await fetch(
+        `${BASE_URL}/jobs/delete/${job.job_id || job.id}`,
+        {
+          method: 'GET', // backend expects GET for deletion
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      console.log('📡 Delete response status:', response.status);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete job');
+      }
+
+      // Success handling
+      setModalTitle('Success');
+      setModalMessage('Job deleted successfully');
+      setResultModalVisible(true);
+
+      // Navigate away after a short delay
+      setTimeout(() => {
+        setResultModalVisible(false);
+        navigation.navigate('JobsSection');
+      }, 2000);
+    } catch (error) {
+      console.error('❌ Delete Job Error:', error.message);
+      setModalTitle('Error');
+      setModalMessage(
+        error.message || 'Something went wrong. Please try again.',
+      );
+      setResultModalVisible(true);
+    }
+  };
+  const handleApplyClick = async () => {
+    try {
+      const data = await handleApply(job.job_id || job.id);
+      setModalTitle('Success');
+      setModalMessage(data.message || 'Applied successfully!');
+      setResultModalVisible(true);
+
+      // ✅ Redirect after short delay
+       setTimeout(() => {
+        setResultModalVisible(false);
+        navigation.navigate('JobsSection'); // Or wherever you want to redirect
+      }, 1500);
+    } catch (error) {
+      setModalTitle('Error');
+      setModalMessage(error.message || 'Something went wrong while applying.');
+      setResultModalVisible(true);
+    }
+  };
+  const handleDeletePostClick = async () => {
+    try {
+      setDeleteModalVisible(false); // Close confirmation modal
+
+      const data = await deleteJob(job.job_id || job.id);
+
+      setModalTitle('Success');
+      setModalMessage(data.message || 'Post deleted successfully.');
+      setResultModalVisible(true);
+
+      setTimeout(() => {
+        setResultModalVisible(false);
+        navigation.navigate('JobsSection'); // Or wherever you want to redirect
+      }, 1500);
+    } catch (error) {
+      setModalTitle('Error');
+      setModalMessage(error.message || 'Something went wrong while deleting.');
+      setResultModalVisible(true);
+    }
+  };
+  const handleNavigation = () => {
+    navigation.navigate('JobDetailS', {
+      job: job,
+      updateJob: updateJob,
+    });
+  };
 
   return (
-    <><TopBar/><ScrollView style={styles.container}>
-          {/* Top Header */}
-{/* 
-          <View style={styles.headerLogo}>
+    <>
+      <TopBar />
+      <ScrollView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}></View>
+
+        {/* Title Card */}
+        <View style={styles.titleCardWrapper}>
+          <View style={styles.profileImageWrapper}>
+            <Image
+              source={{
+                uri: job?.user?.profile_picture || 'https://i.pravatar.cc/100',
+              }}
+              style={styles.profileImage}
+            />
+          </View>
+
+          <View style={styles.titleCard}>
+            <Text style={styles.titleText}>
+              {job?.user?.first_name} {job?.user?.last_name} (
+              {job?.job_type?.job || 'Job Title'})
+            </Text>
+          </View>
+        </View>
+
+        {/* Description */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Job Description</Text>
+          <Text style={styles.sectionText}>{displayedText}</Text>
+
+          {isLongDescription && !showFullDescription && (
+            <TouchableOpacity onPress={() => setShowFullDescription(true)}>
+              <Text style={styles.readMore}>Read more</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Location */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Location</Text>
+          <Text style={styles.sectionText}>
+            {job?.address?.label}, {job?.address?.building},{' '}
+            {job?.address?.apartment}
+          </Text>
+          <MapView style={styles.map} initialRegion={region}>
+            <Marker coordinate={region} />
+          </MapView>
+        </View>
+
+        {/* Info Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Informations</Text>
+
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Status</Text>
+            <Text style={styles.infoValue}>{job?.status}</Text>
+            <View style={styles.infoDivider} />
+          </View>
+
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Budget</Text>
+            <Text style={styles.infoValue}>E${job?.budget}</Text>
+            <View style={styles.infoDivider} />
+          </View>
+
+          <View style={styles.infoBlock}>
+            <Text style={styles.infoLabel}>Created At</Text>
+            <Text style={styles.infoValue}>
+              {new Date(job?.createdAt).toLocaleDateString()}
+            </Text>
+            <View style={styles.infoDivider} />
+          </View>
+        </View>
+
+        {/* Images if any */}
+        {job?.images?.length > 0 && (
+          <ScrollView horizontal style={{marginVertical: 10}}>
+            {job.images.map((img, index) => (
               <Image
-                  source={require('../assets/asset_logo.png')}
-                  style={styles.logo} />
-              <TouchableOpacity style={styles.profileButton}>
-                  <Icon name="person-outline" size={24} />
-              </TouchableOpacity>
-          </View> */}
+                key={index}
+                source={{uri: img}}
+                style={{
+                  width: 200,
+                  height: 120,
+                  marginRight: 10,
+                  borderRadius: 8,
+                }}
+              />
+            ))}
+          </ScrollView>
+        )}
 
-          <View style={styles.header}>
-              {/* <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                  <Icon name="arrow-back" size={24} color="#333" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>User Profile</Text> */}
-          </View>
+        {/* Apply Button */}
+        <View
+          style={{
+            flexDirection: updateJob ? 'row' : 'column',
+            // alignItems: 'center',
+          }}>
+          <TouchableOpacity
+            style={[
+              styles.applyBtn,
 
-          {/* Title Card */}
-          <View style={styles.titleCardWrapper}>
-              <View style={styles.profileImageWrapper}>
-                  <Image source={{ uri: jobData.imageUrl }} style={styles.profileImage} />
-              </View>
-              <View style={styles.titleCard}>
-                  <Text style={styles.titleText}>{jobData.Name}</Text>
-              </View>
-          </View>
+              // Update → primary color
+              updateJob && {backgroundColor: '#6264A7'},
 
-          {/* Description */}
-          <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Job Description</Text>
-              <Text style={styles.sectionText}>{jobData.description}</Text>
-              <TouchableOpacity>
-                  <Text style={styles.readMore}>Read more</Text>
-              </TouchableOpacity>
-          </View>
+              // Applied → gray
+              !updateJob && job?.apply_status && {backgroundColor: '#ccc'},
 
-          {/* Location */}
-          <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Location</Text>
-              <Text style={styles.sectionText}>{jobData.location}</Text>
-              <MapView style={styles.map} initialRegion={region}>
-                  <Marker coordinate={region} />
-              </MapView>
-          </View>
+              // Apply (only if updateJob === false and not my job) → primary color
+              updateJob === false &&
+                job?.is_my_job === false &&
+                !job?.apply_status && {
+                  backgroundColor: '#6264A7',
+                },
 
-          {/* Info Section */}
-          <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Informations</Text>
-              {Object.entries(jobData.info).map(([label, value], index) => (
-                  <View key={index} style={styles.infoBlock}>
-                      <Text style={styles.infoLabel}>{label}</Text>
-                      {label === 'Job Type' && Array.isArray(value) ? (
-                          <View style={styles.chipContainer}>
-                              {value.map((type, i) => (
-                                  <View key={i} style={styles.chip}>
-                                      <Text style={styles.chipText}>{type}</Text>
-                                  </View>
-                              ))}
-                          </View>
-                      ) : (
-                          <Text style={styles.infoValue}>{value}</Text>
-                      )}
-                      <View style={styles.infoDivider} />
-                  </View>
-              ))}
-          </View>
-
-          {/* Apply Button */}
-          <TouchableOpacity style={styles.applyBtn}>
-              <Text style={styles.applyText}>Apply</Text>
+              // Make Update button share space with delete button
+              updateJob && {flex: 1},
+            ]}
+            onPress={() => {
+              if (updateJob) {
+                navigation.navigate('JobDetailS', {
+                  job: job,
+                  updateJob: updateJob,
+                });
+              } else if (
+                !updateJob &&
+                job?.is_my_job === false &&
+                !job?.apply_status
+              ) {
+                handleApplyClick();
+              }
+            }}>
+            <Text style={styles.applyText}>
+              {updateJob
+                ? 'Update'
+                : job?.apply_status
+                ? 'Applied'
+                : updateJob === false && job.is_my_job === false
+                ? 'Apply'
+                : ''}
+            </Text>
           </TouchableOpacity>
 
-      </ScrollView><BottomTabBar /></>
+          {updateJob && (
+            <TouchableOpacity
+              style={[
+                styles.delButton,
+                {backgroundColor: 'red', marginLeft: 10, flex: 1},
+              ]}
+              disabled={!updateJob && job?.apply_status}
+              onPress={() => setDeleteModalVisible(true)}>
+              <Text style={styles.applyText}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Confirmation modal before delete */}
+        <CustomModal
+          visible={deleteModalVisible}
+          title="Confirm Delete"
+          message="Are you sure you want to delete this job?"
+          buttonText="Cancel"
+          confirmText="Delete"
+          onClose={() => setDeleteModalVisible(false)}
+          onConfirm={handleDelete}
+        />
+
+        {/* Result modal after delete attempt */}
+        <CustomModal
+          visible={resultModalVisible}
+          title={modalTitle}
+          message={modalMessage}
+          buttonText="OK"
+          onClose={() => setResultModalVisible(false)}
+        />
+      </ScrollView>
+      <BottomTabBar />
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+  container: {flex: 1, backgroundColor: '#fff', padding: 16},
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    // marginTop: 20,
     marginBottom: 10,
   },
   backButton: {
@@ -174,12 +372,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingTop: 30,
   },
-  titleText: { fontWeight: 'bold', fontSize: 16 },
+  titleText: {fontWeight: 'bold', fontSize: 16},
 
-  section: { marginBottom: 20 },
-  sectionTitle: { fontWeight: 'bold', color: '#25396F', marginBottom: 5 },
-  sectionText: { color: '#333' },
-  readMore: { color: '#25396F', fontWeight: 'bold', marginTop: 5 },
+  section: {marginBottom: 20},
+  sectionTitle: {fontWeight: 'bold', color: '#25396F', marginBottom: 5},
+  sectionText: {color: '#333'},
+  readMore: {color: '#25396F', fontWeight: 'bold', marginTop: 5},
 
   map: {
     width: '100%',
@@ -187,15 +385,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 8,
     ...Platform.select({
-      ios: { overflow: 'hidden' },
+      ios: {overflow: 'hidden'},
       android: {},
     }),
   },
 
-  infoBlock: { marginBottom: 12 },
-  infoLabel: { fontWeight: '600', fontSize: 13, color: '#25396F' },
-  infoValue: { fontSize: 13, color: '#444', marginTop: 2 },
-  infoDivider: { height: 1, backgroundColor: '#eee', marginTop: 8 },
+  infoBlock: {marginBottom: 12},
+  infoLabel: {fontWeight: '600', fontSize: 13, color: '#25396F'},
+  infoValue: {fontSize: 13, color: '#444', marginTop: 2},
+  infoDivider: {height: 1, backgroundColor: '#eee', marginTop: 8},
 
   chipContainer: {
     flexDirection: 'row',
@@ -223,24 +421,38 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     alignItems: 'center',
     marginVertical: 20,
-    marginBottom: 120
+    marginBottom: 120,
   },
-  applyText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  delButton: {
+    backgroundColor: 'red',
+    borderRadius: 10,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginVertical: 20,
+    marginBottom: 120,
+  },
+  applyText: {color: '#fff', fontWeight: 'bold', fontSize: 16},
+
   headerLogo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
-  logo: { width: 100, height: 100, resizeMode: 'contain', marginTop:10,  alignSelf: 'flex-end', padding: 10},
-  profileButton:{marginRight: 10, padding: 10, borderRadius: 8},
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    marginTop: 10,
+    alignSelf: 'flex-end',
+    padding: 10,
+  },
+  profileButton: {marginRight: 10, padding: 10, borderRadius: 8},
   heading: {
-    // marginTop:10,
-    marginLeft: 10,          // add left space after back button
+    marginLeft: 10,
     fontSize: 18,
     fontWeight: 'bold',
   },
-
 });
 
 export default JobDetailsScreen;

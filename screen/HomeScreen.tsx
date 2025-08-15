@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {memo, useCallback, useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {
@@ -28,10 +28,14 @@ import {Icon} from 'react-native-elements';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { handleSecurePress } from './config/auth';
+import {handleSecurePress} from './config/auth';
+import {getMyJobs} from '../utils/fetchJobs';
+import {fetchPosts} from '../utils/fetchPosts';
+
 
 const {height} = Dimensions.get('window');
-const NavPopup = ({ visible, onClose }: any) => {
+
+const NavPopup = memo(({visible, onClose}: any) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   return (
@@ -61,50 +65,82 @@ const NavPopup = ({ visible, onClose }: any) => {
 
           <TouchableOpacity style={styles.navItemMenu}>
             <Icon name="logout" type="material" size={24} color="#FF3B30" />
-            <Text style={[styles.navText, { color: '#FF3B30' }]}>Logout</Text>
+            <Text style={[styles.navText, {color: '#FF3B30'}]}>Logout</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
   );
-};
+});
 
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [tokenChecked, setTokenChecked] = useState(false);
+  const [jobs, setJobs] = useState<any>(false);
+  const [loading, setLoading] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  
+
+  const loadJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await getMyJobs();
+      if (res?.status) setJobs(res.data);
+    } catch (err: any) {
+      console.error('Failed to load jobs:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+useFocusEffect(
+  
+  React.useCallback(() => {
+    // This runs every time screen comes into focus
+    loadJobs();
+  }, [])
+);
+  const loadPosts = async (authToken: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        'https://buildio.co.nz/api/posts/list?page=1&limit=10',
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+
+      const data = await response.json();
+      setPosts(data?.data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const getToken = async () => {
+    (async () => {
       const storedToken = await AsyncStorage.getItem('authToken');
       setToken(storedToken);
       setTokenChecked(true);
-    };
-    getToken();
+      if (storedToken) loadPosts(storedToken);
+    })();
+    loadJobs();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      setModalVisible(false);
-    }, [])
-  );
-// useEffect(() => {
-//   const checkAuth = async () => {
-//     const storedToken = await AsyncStorage.getItem('authToken');
-//     if (!storedToken) {
-//       navigation.reset({
-//         index: 0,
-//         routes: [{ name: 'Login' }],
-//       });
-//     }
-//   };
+  useFocusEffect(useCallback(() => setModalVisible(false), []));
 
-//   checkAuth();
-// }, []);
- 
-
-  if (!tokenChecked) return null; // Optional: Replace with splash or loader
+  if (!tokenChecked) return null;
 
   return (
     <>
@@ -132,7 +168,7 @@ const HomeScreen = () => {
 
           <TouchableOpacity
             style={styles.cardBtn}
-            onPress={() => handleSecurePress('PickJob' , navigation)}>
+            onPress={() => navigation.navigate('PickJob', {myJob: jobs})}>
             <View style={styles.cardContent}>
               <View>
                 <Text style={styles.cardTitle}>Pick a Job</Text>
@@ -150,7 +186,7 @@ const HomeScreen = () => {
 
         <TouchableOpacity style={styles.recentlyPosted}>
           <View style={styles.leftSection}>
-            <Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
+            <Icon name="edit-note" size={16} color="#fff" />
             <Text style={styles.buttonText}>News Section</Text>
           </View>
         </TouchableOpacity>
@@ -163,7 +199,10 @@ const HomeScreen = () => {
           <Text style={styles.exploreText}>
             "Find reliable workers for construction needs"
           </Text>
-          <ExploreMoreButton text={'Know More'} onPress={() => handleSecurePress('NewsScreen', navigation)} />
+          <ExploreMoreButton
+            text="Know More"
+            onPress={() => handleSecurePress('NewsScreen', navigation)}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -172,26 +211,43 @@ const HomeScreen = () => {
           <View style={styles.leftSection}>
             <Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
             <Text style={styles.buttonText}>Recently posted</Text>
-            <Icon name="arrow-right" size={16} color="#fff" style={styles.rightIcon} />
+            <Icon
+              name="arrow-right"
+              size={16}
+              color="#fff"
+              style={styles.rightIcon}
+            />
             <Text style={styles.moreText}>More</Text>
           </View>
         </TouchableOpacity>
 
-        {/* Recent jobs list */}
         <View style={styles.recentJobs}>
-          {[
-            { title: 'Carpenter', city: 'Auckland', avatar: 'men/34.jpg' },
-            { title: 'Electrician', city: 'Christchurch', avatar: 'men/32.jpg' },
-            { title: 'Concrete Finisher', city: 'Queenstown', avatar: 'women/32.jpg' },
-          ].map((job, index) => (
+          {jobs?.data?.slice(0, 3).map((job: any, index: number) => (
             <View style={styles.jobItem} key={index}>
               <View>
-                <Text style={styles.jobTitle}>{job.title}</Text>
-                <Text style={styles.jobSubText}>{job.city}, New Zealand</Text>
-                <Text style={styles.jobSubText}>Project completion by 13 Jan 2025</Text>
+                <Text style={styles.jobTitle}>
+                  {job.job_type?.job || 'Job Title'}
+                </Text>
+                <Text style={styles.jobSubText}>
+                  {job.address?.building || 'Unknown City'}
+                </Text>
+                <Text style={styles.jobSubText}>
+                  Project completion by{' '}
+                  {job.deadline
+                    ? new Date(job.deadline).toLocaleDateString('en-NZ', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'Unknown'}
+                </Text>
               </View>
               <Image
-                source={{ uri: `https://randomuser.me/api/portraits/${job.avatar}` }}
+                source={{
+                  uri:
+                    job.user?.profile_picture ||
+                    `https://randomuser.me/api/portraits/men/${30 + index}.jpg`,
+                }}
                 style={styles.jobAvatar}
               />
             </View>
@@ -200,8 +256,8 @@ const HomeScreen = () => {
 
         <TouchableOpacity
           style={styles.seeAll}
-          onPress={() => handleSecurePress('PickJob', navigation)}>
-          <Text style={{ color: '#fff' }}>See All</Text>
+          onPress={() => navigation.navigate('PickJob', {myJob: jobs})}>
+          <Text style={{color: '#fff'}}>See All</Text>
         </TouchableOpacity>
 
         <PostFeed
@@ -209,6 +265,7 @@ const HomeScreen = () => {
           showBottomBar={false}
           showHeader={false}
           showLikeAndShare={false}
+          myJobs={posts}
         />
 
         <TouchableOpacity
@@ -217,11 +274,14 @@ const HomeScreen = () => {
           <Text style={styles.exploreText}>
             "Find reliable workers for construction needs"
           </Text>
-          <ExploreMoreButton text={'Explore More'} onPress={() => handleSecurePress('Feed', navigation)} />
+          <ExploreMoreButton
+            text="Explore More"
+            onPress={() => handleSecurePress('Feed', navigation)}
+          />
         </TouchableOpacity>
       </ScrollView>
 
-      <View style={{ height: 100, backgroundColor: '#fff' }} />
+      <View style={{height: 100, backgroundColor: '#fff'}} />
       <BottomTabBar />
       <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
     </>
@@ -229,26 +289,7 @@ const HomeScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#fff',
-    flex: 1, // take full height of the screen
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  profileButton: {marginRight: 10, padding: 10, borderRadius: 8, marginTop: 15},
-  logo: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain',
-    marginTop: 10,
-    alignSelf: 'flex-end',
-    padding: 10,
-  },
+  container: {padding: 10, backgroundColor: '#fff', flex: 1},
   search: {
     marginVertical: 15,
     padding: 10,
@@ -256,87 +297,35 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: -15,
   },
-  icon: {
-    marginRight: 8,
-  },
-  leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardRow: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'stretch',
-  },
-  moreText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  iconImage: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain', // Makes sure the image is not stretched
-  },
-
+  cardRow: {flexDirection: 'column', alignItems: 'stretch',backgroundColor:'#fff'},
   cardBtn: {
     backgroundColor: '#6264A7',
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
-    width: '100%',
-    height: 120, // ⬅️ adjust height here as needed
-    justifyContent: 'center', // to vertically center the content
+    height: 120,
+    justifyContent: 'center',
   },
-
   cardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
-  cardTitle: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  cardSubtitle: {
-    color: 'white',
-    fontSize: 14,
-    marginTop: 4,
-  },
-
-  cardIcon: {
-    marginLeft: 'auto', // Add styles for real image or icon if needed
-  },
-  rightIcon: {
-    marginLeft: 150, // Add styles for real image or icon if needed
-  },
-  sectionTitle: {marginTop: 24, fontWeight: 'bold', fontSize: 16},
+  cardTitle: {color: 'white', fontSize: 16, fontWeight: 'bold'},
+  cardSubtitle: {color: 'white', fontSize: 14, marginTop: 4},
+  cardIcon: {marginLeft: 'auto'},
+  iconImage: {width: 100, height: 100, resizeMode: 'contain'},
+  leftSection: {flexDirection: 'row', alignItems: 'center'},
+  buttonText: {color: '#fff', fontSize: 14, fontWeight: '600'},
+  moreText: {color: '#fff', fontSize: 14},
+  rightIcon: {marginLeft: 150},
   recentlyPosted: {
     marginTop: 24,
-    fontWeight: 'bold',
-    fontSize: 16,
     backgroundColor: '#C1C5D0',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
     borderRadius: 10,
-    shadowRadius: 3,
-  },
-
-  seeAll: {
-    marginTop: 10,
-    backgroundColor: '#6264A7',
-    padding: 10,
-    borderRadius: 10,
-    alignItems: 'center',
+    padding:20
   },
   exploreCard: {
     backgroundColor: '#f4f6ff',
@@ -345,33 +334,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   exploreText: {fontWeight: 'bold', marginBottom: 10},
-  postCard: {
-    marginTop: 20,
-    backgroundColor: '#f9f9f9',
-    padding: 12,
+  seeAll: {
+    marginTop: 10,
+    backgroundColor: '#6264A7',
+    padding: 10,
     borderRadius: 10,
+    alignItems: 'center',
   },
-  postImage: {width: '100%', height: 150, borderRadius: 10},
-  postText: {marginTop: 10, fontSize: 14},
-  userRow: {flexDirection: 'row', alignItems: 'center', marginTop: 8},
-  avatarSmall: {width: 30, height: 30, borderRadius: 15, marginRight: 8},
-  userText: {fontSize: 12, color: '#777'},
   recentJobs: {marginTop: 16},
   jobItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
+    paddingHorizontal:10
   },
   jobTitle: {fontWeight: 'bold', fontSize: 14},
   jobSubText: {fontSize: 12, color: '#555'},
   jobAvatar: {width: 50, height: 50, borderRadius: 25},
-
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-start',
@@ -389,40 +369,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
     elevation: 5,
   },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 10,
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#3F51B5',
-  },
-  profileSubText: {
-    fontSize: 12,
-    color: 'gray',
-  },
-  // navItem: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   marginVertical: 10,
-  // },
-  navText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#3F51B5',
-  },
-  navItemMenu: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
+  navText: {marginLeft: 10, fontSize: 16, color: '#3F51B5'},
+  navItemMenu: {flexDirection: 'row', alignItems: 'center', marginVertical: 10},
 });
 
 export default HomeScreen;

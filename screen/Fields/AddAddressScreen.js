@@ -24,52 +24,38 @@ const ManageAddressScreen = ({navigation}) => {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchAddresses = async () => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) throw new Error('Token not found');
+const fetchAddresses = async () => {
+  try {
+    setLoading(true);
+    const token = await AsyncStorage.getItem('authToken');
+    if (!token) throw new Error('Token not found');
 
-      const response = await fetch(
-        'https://buildio.co.nz/api/users/my_addresses',
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+    const response = await fetch(
+      'https://buildio.co.nz/api/users/my_addresses',
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      );
-      setLoading(true);
+      },
+    );
 
-      const result = await response.json();
+    const result = await response.json();
 
-      if (response.ok && result?.data) {
-        const enrichedAddresses = await Promise.all(
-          result.data.map(async addr => {
-            try {
-              const locRes = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${addr.lat}&lon=${addr.long}`,
-              );
-              const locData = await locRes.json();
-              return {...addr, fullAddress: locData.display_name || ''};
-            } catch (e) {
-              return {...addr, fullAddress: ''};
-            }
-          }),
-        );
-        setAddresses(enrichedAddresses);
-        setLoading(false);
-      } else {
-        Alert.alert('Error', result?.message || 'Failed to fetch addresses');
-      }
-    } catch (err) {
-      console.error('Address fetch error:', err);
-      Alert.alert('Error', 'Something went wrong while fetching addresses');
-    } finally {
-      setLoading(false);
+    if (response.ok && result?.data) {
+      // Directly set addresses without enrichment
+      setAddresses(result.data);
+    } else {
+      Alert.alert('Error', result?.message || 'Failed to fetch addresses');
     }
-  };
-
+  } catch (err) {
+    console.error('Address fetch error:', err);
+    Alert.alert('Error', 'Something went wrong while fetching addresses');
+  } finally {
+    setLoading(false);
+  }
+};
   useFocusEffect(
     useCallback(() => {
       fetchAddresses();
@@ -142,10 +128,10 @@ const ManageAddressScreen = ({navigation}) => {
                   <Text style={styles.addressLabel}>
                     {addr.label || 'Unnamed Address'}
                   </Text>
-                  <Text style={styles.addressText}>
+                  {/* <Text style={styles.addressText}>
                     {addr.fullAddress ||
                       'Coordinates: ' + addr.lat + ', ' + addr.long}
-                  </Text>
+                  </Text> */}
                   <Text style={styles.addressText}>
                     {addr.apartment}, {addr.building}
                   </Text>

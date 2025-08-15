@@ -12,6 +12,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CheckBox } from 'react-native-elements'; // Make sure this package is installed
 import TopBar from '../components/TopBar';
 import BottomTabBar from '../components/BottomNavigaionBar';
+import Heading from '../components/CommonHeader';
 
 const aboutData = {
   title: 'Privacy & Security',
@@ -50,7 +51,9 @@ return (
             style={styles.backButton}
           /> */}
         </TouchableOpacity>
-        <Text style={styles.headerText}>{aboutData.title}</Text>
+        {/* <Text style={styles.headerText}>{aboutData.title}</Text> */}
+                 <Heading>{aboutData.title}</Heading>
+
       </View>
 
       {/* Main Content */}
