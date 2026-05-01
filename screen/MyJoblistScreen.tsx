@@ -28,7 +28,7 @@ export default function TopTabsComponent() {
   const [approvedApplicants, setApprovedApplicants] = useState<number[]>([]);
 
   const route = useRoute();
-  const {jobId} = route.params as {jobId: number};
+const jobId = typeof route?.params?.jobId === 'number' ? route.params.jobId : null;
   const API_URL = `https://buildio.co.nz/api/jobs/applicants/${jobId}`;
 
   const fetchApplicants = async () => {
@@ -43,11 +43,14 @@ export default function TopTabsComponent() {
       });
 
       const json = await response.json();
-      if (json.status) {
-        setApplicants(json.data);
+      if (json.status && json.data) {
+        setApplicants(json.data || []);
+      } else {
+        setApplicants([]);
       }
     } catch (error) {
       console.error('Error fetching applicants:', error);
+      setApplicants([]);
     } finally {
       setLoading(false);
     }
@@ -77,10 +80,12 @@ export default function TopTabsComponent() {
     const profileImage =
       user.profile_picture || 'https://via.placeholder.com/50';
     const isDisabled = item.status === 'approved' || item.status === 'rejected';
-    console.log(isDisabled,'isDisabled')
 
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('UserScreen')}>
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate('UserScreen', {user: item.user})
+        }>
         <View style={styles.jobContainer}>
           <Image source={{uri: profileImage}} style={styles.avatar} />
           <View style={styles.jobDetails}>

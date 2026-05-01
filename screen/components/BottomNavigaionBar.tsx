@@ -1,85 +1,112 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React from 'react';
+import {View, TouchableOpacity, Text, StyleSheet} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../../navigation/Navigation';
-import { handleSecurePress } from '../config/auth';
+import {NavigationProp, useNavigation, useNavigationState} from '@react-navigation/native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {RootStackParamList} from '../../navigation/Navigation';
+import {handleSecurePress} from '../config/auth';
+
+// ✅ Map screen names to tab names — single source of truth
+const SCREEN_TO_TAB: Record<string, string> = {
+  HomeScreen: 'Home',
+  Feed: 'Home',
+  NewsScreen: 'Home',
+  AddPostScreen: 'Add',
+  JobListComponent: 'Booking',
+  JobsSection: 'Booking',
+  ChatListScreen: 'Chat',
+};
 
 const BottomTabBar = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [activeTab, setActiveTab] = useState<string>('Home');
+
+  // ✅ This is the key fix — reads ACTUAL current route from nav state
+  // updates automatically on every navigation change, no useState needed
+  const currentRouteName = useNavigationState(state => {
+    if (!state) return '';
+    return state.routes[state.index]?.name ?? '';
+  });
+
+  const activeTab = SCREEN_TO_TAB[currentRouteName] ?? '';
+
+  const handleTabPress = (
+    tabName: string,
+    screenName: keyof RootStackParamList,
+  ) => {
+    // ✅ Don't re-navigate if already on this tab
+    if (activeTab === tabName) return;
+    handleSecurePress(screenName, navigation);
+  };
 
   return (
-    <View style={[styles.bottomNav, { paddingBottom: insets.bottom || 40 }]}>
+    <View style={[styles.bottomNav, {paddingBottom: insets.bottom || 40}]}>
+      {/* Home */}
       <TouchableOpacity
         style={styles.navItem}
-        onPress={() => {
-          setActiveTab('Home');
-          handleSecurePress('HomeScreen', navigation);
-        }}>
+        onPress={() => handleTabPress('Home', 'HomeScreen')}>
         <Icon
-          name="home-outline"
+          name={activeTab === 'Home' ? 'home' : 'home-outline'}
           size={24}
           color={activeTab === 'Home' ? '#6264A7' : '#888'}
         />
-        <Text style={[styles.navLabel, activeTab === 'Home' && { color: '#6264A7' }]}>Home</Text>
+        <Text
+          style={[
+            styles.navLabel,
+            activeTab === 'Home' && styles.activeNavLabel,
+          ]}>
+          Home
+        </Text>
+        {activeTab === 'Home' && <View style={styles.activeDot} />}
       </TouchableOpacity>
 
+      {/* FAB - Add Post */}
       <TouchableOpacity
-        style={styles.navItem}
-        onPress={() => {
-          setActiveTab('Booking');
-          handleSecurePress('BookingScreen', navigation); // Replace with actual screen name
-        }}>
-        <Icon
-          name="pricetags-outline"
-          size={24}
-          color={activeTab === 'Booking' ? '#6264A7' : '#555'}
-        />
-        <Text style={[styles.navLabel, activeTab === 'Booking' && { color: '#6264A7' }]}>Booking</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {
-          setActiveTab('Add');
-          handleSecurePress('AddPostScreen', navigation);
-        }}>
+        style={[styles.fab, activeTab === 'Add' && styles.activeFab]}
+        onPress={() => handleTabPress('Add', 'AddPostScreen')}>
         <Icon name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-      <TouchableOpacity
+      {/* Booking */}
+      {/* <TouchableOpacity
         style={styles.navItem}
-        onPress={() => {
-          setActiveTab('Chat');
-          handleSecurePress('ChatListScreen', navigation);
-        }}>
+        onPress={() => handleTabPress('Booking', 'JobListComponent')}>
         <Icon
-          name="chatbubble-outline"
+          name={activeTab === 'Booking' ? 'pricetags' : 'pricetags-outline'}
           size={24}
-          color={activeTab === 'Chat' ? '#6264A7' : '#555'}
+          color={activeTab === 'Booking' ? '#6264A7' : '#888'}
         />
-        <Text style={[styles.navLabel, activeTab === 'Chat' && { color: '#6264A7' }]}>Chat</Text>
-      </TouchableOpacity>
+        <Text
+          style={[
+            styles.navLabel,
+            activeTab === 'Booking' && styles.activeNavLabel,
+          ]}>
+          Booking
+        </Text>
+        {activeTab === 'Booking' && <View style={styles.activeDot} />}
+      </TouchableOpacity> */}
 
-      <TouchableOpacity
+       <TouchableOpacity
         style={styles.navItem}
-        onPress={() => {
-          setActiveTab('Notify');
-          handleSecurePress('NotificationScreen', navigation); // Replace with actual screen name
-        }}>
+        onPress={() => handleTabPress('Chat', 'ChatListScreen')}>
         <Icon
-          name="notifications-outline"
+          name={activeTab === 'Chat' ? 'chatbubble' : 'chatbubble-outline'}
           size={24}
-          color={activeTab === 'Notify' ? '#6264A7' : '#888'}
+          color={activeTab === 'Chat' ? '#6264A7' : '#888'}
         />
-        <Text style={[styles.navLabel, activeTab === 'Notify' && { color: '#6264A7' }]}>Notifications</Text>
+        <Text
+          style={[
+            styles.navLabel,
+            activeTab === 'Chat' && styles.activeNavLabel,
+          ]}>
+          Chat
+        </Text>
+        {activeTab === 'Chat' && <View style={styles.activeDot} />}
       </TouchableOpacity>
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   bottomNav: {
     position: 'absolute',
@@ -94,6 +121,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#ddd',
     height: 90,
     zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 10,
   },
   fab: {
     width: 60,
@@ -104,22 +136,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: -30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.3,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  activeFab: {
+    backgroundColor: '#4A4C85',
+    transform: [{scale: 1.05}],
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 10,
+    paddingHorizontal: 8,
   },
   navLabel: {
     fontSize: 10,
     marginTop: 2,
     color: '#888',
+    fontWeight: '500',
+  },
+  activeNavLabel: {
+    color: '#6264A7',
+    fontWeight: '600',
+  },
+  // ✅ Active indicator dot under icon
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#6264A7',
+    marginTop: 3,
   },
 });
 
 export default BottomTabBar;
-export { BottomTabBar };
+export {BottomTabBar};

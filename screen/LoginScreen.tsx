@@ -11,6 +11,7 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import {Icon} from 'react-native-elements';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
@@ -22,11 +23,12 @@ import {
   onAuthStateChanged,
 } from '@react-native-firebase/auth';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
-import {_signInWithGoogle} from './config/auth';
+import {_signInWithGoogle, socialLoginAPI} from './config/auth';
 import fireStore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useEffect} from 'react';
 import CustomModal from './components/CustomModal';
+import {addDeviceId} from '../utils/fcmToken';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -40,6 +42,7 @@ export default function LoginScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleAuthStateChanged(
     user: import('@react-native-firebase/auth').FirebaseAuthTypes.User | null,
@@ -82,7 +85,16 @@ export default function LoginScreen() {
     await AsyncStorage.setItem('UID', uid);
     await AsyncStorage.setItem('NAME', name);
     await AsyncStorage.setItem('EMAIL', email);
-    navigation.navigate('HomeScreen');
+    
+    // Check if terms are accepted
+    const isTermsAccepted = await AsyncStorage.getItem('is_terms_accepted');
+    
+    if (isTermsAccepted === 'true') {
+      navigation.navigate('HomeScreen');
+    } else {
+      // Navigate to PrivacySecurityScreen if terms not accepted
+      navigation.navigate('PrivacySecurity');
+    }
   };
 
   const handleSignIn = async () => {
@@ -91,7 +103,14 @@ export default function LoginScreen() {
       setModalVisible(true);
       return;
     }
+    
+    setIsLoading(true);
+    
     try {
+      console.log('Attempting sign in with:', {email});
+      
+      // Step 1: Make the fetch request
+      console.log('Fetching from: https://buildio.co.nz/api/auth/sign_in');
       const response = await fetch('https://buildio.co.nz/api/auth/sign_in', {
         method: 'POST',
         headers: {
@@ -104,15 +123,34 @@ export default function LoginScreen() {
         }),
       });
 
+      console.log('✅ Fetch completed. Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      // Step 2: Parse the response
+      console.log('Parsing response JSON...');
+      let data;
+      try {
+        data = await response.json();
+        console.log('✅ JSON parsed successfully:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON:', parseError);
+        const textData = await response.text();
+        console.error('Response text:', textData);
+        throw new Error('Invalid response format from server');
+      }
+
+      // Step 3: Handle response based on status
       if (response.status === 200) {
-        const data = await response.json();
+        console.log('✅ Login successful');
         const token = data.data.token;
         const firstName = data.data.user.first_name;
         const lastName = data.data.user.last_name;
-        const userId = data.data.user.id; // assuming `id` is user ID
-        const uid = data.data.user.uid || ''; // fallback if missing
-
-        // Save auth token and user name separately
+        const userId = data.data.user.id;
+        const uid = data.data.user.uid || '';
+        const isTermsAccepted = data.data.user.is_terms_accepted;
+        
+        console.log('Saving to AsyncStorage...');
+        // Save auth token and user info
         await AsyncStorage.setItem('authToken', token);
         await AsyncStorage.setItem('firstName', firstName || '');
         if (lastName) {
@@ -120,63 +158,120 @@ export default function LoginScreen() {
         } else {
           await AsyncStorage.removeItem('lastName');
         }
+        // Save terms acceptance status
+        await AsyncStorage.setItem('is_terms_accepted', isTermsAccepted ? 'true' : 'false');
         await AsyncStorage.setItem('prefs:hasSeenIntro', 'true');
+        console.log('✅ AsyncStorage updated');
 
-        // ✅ Reuse helper to store info and navigate
+        // Navigate based on terms acceptance
+        console.log('Navigating...');
         await goToNext(
           `${firstName} ${lastName || ''}`,
           email,
           userId.toString(),
           uid.toString(),
         );
+      } else if (response.status === 401) {
+        console.warn('❌ 401 Unauthorized');
+        setModalMessage('Invalid email or password');
+        setModalVisible(true);
+      } else if (response.status === 404) {
+        console.warn('❌ 404 Not Found');
+        setModalMessage('User not found. Please sign up first.');
+        setModalVisible(true);
       } else {
-        const errorData = await response.json();
-        console.error('Login failed:', errorData);
-        setModalMessage('Something went wrong. Please try again.');
+        console.warn('❌ Unexpected status:', response.status);
+        const errorMessage = data.message || 'Login failed. Please try again.';
+        setModalMessage(errorMessage);
         setModalVisible(true);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      // Alert.alert('Error', JSON.stringify(error));
+    } catch (error: any) {
+      console.error('❌ Error caught:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      if (error.message.includes('Network') || error.message.includes('fetch')) {
+        setModalMessage('Network error. Please check your connection and try again.');
+      } else if (error.message.includes('Invalid response format')) {
+        setModalMessage('Server returned invalid data. Please try again.');
+      } else {
+        setModalMessage(error.message || 'An error occurred. Please try again.');
+      }
+      setModalVisible(true);
+    } finally {
+      console.log('Setting isLoading to false');
+      setIsLoading(false);
     }
   };
 
   async function onGoogleButtonPress() {
+    // const fcmToken = await AsyncStorage.getItem('fcmToken');
+    // await addDeviceId(fcmToken);
     _signInWithGoogle(navigation);
   }
 
   async function onFacebookButtonPress() {
+    // const fcmToken = await AsyncStorage.getItem('fcmToken');
+    // await addDeviceId(fcmToken);
     console.log('Facebook button pressed');
-    // Attempt login with permissions
-    const result = await LoginManager.logInWithPermissions([
-      'public_profile',
-      'email',
-    ]);
-    // console.log('Login result:', result);
+    try {
+      // Attempt login with permissions
+      const result = await LoginManager.logInWithPermissions([
+        'public_profile',
+        'email',
+      ]);
+      // console.log('Login result:', result);
 
-    if (result.isCancelled) {
-      // navigation.navigate('HomeScreen');
+      if (result.isCancelled) {
+        // navigation.navigate('HomeScreen');
 
-      throw 'User cancelled the login process';
+        throw 'User cancelled the login process';
+      }
+
+      // Once signed in, get the users AccessToken
+      const data = await AccessToken.getCurrentAccessToken();
+
+      if (!data) {
+        throw 'Something went wrong obtaining access token';
+      }
+
+      // Create a Firebase credential with the AccessToken
+      const facebookCredential = FacebookAuthProvider.credential(
+        data.accessToken,
+      );
+      const firebaseUserCredential = await getAuth().signInWithCredential(facebookCredential);
+      const user = firebaseUserCredential.user;
+      console.log('Facebook credential:', facebookCredential);
+
+      // Call our backend API to authenticate/register user
+      try {
+        const apiResponse = await socialLoginAPI({
+          email: user.email,
+          first_name: user.displayName || '',
+          social_media_provider: 'Facebook',
+          provider_token: user.uid,
+        });
+
+        // Check if terms are accepted from API response
+        const isTermsAccepted = apiResponse.data.user?.is_terms_accepted;
+        
+        if (isTermsAccepted) {
+          navigation.navigate('HomeScreen');
+        } else {
+          // Navigate to PrivacySecurityScreen if terms not accepted
+          navigation.navigate('PrivacySecurity');
+        }
+      } catch (apiError) {
+        console.error('API call error during Facebook login:', apiError);
+        Alert.alert('Error', 'Failed to complete login. Please try again.');
+      }
+
+      // Sign-in the user with the credential
+      return signInWithCredential(getAuth(), facebookCredential);
+    } catch (error) {
+      console.error('Facebook login error:', error);
+      Alert.alert('Error', error || 'Facebook login failed. Please try again.');
     }
-
-    // Once signed in, get the users AccessToken
-    const data = await AccessToken.getCurrentAccessToken();
-    navigation.navigate('HomeScreen');
-
-    if (!data) {
-      throw 'Something went wrong obtaining access token';
-    }
-
-    // Create a Firebase credential with the AccessToken
-    const facebookCredential = FacebookAuthProvider.credential(
-      data.accessToken,
-    );
-    await getAuth().signInWithCredential(facebookCredential);
-    console.log('Facebook credential:', facebookCredential);
-
-    // Sign-in the user with the credential
-    return signInWithCredential(getAuth(), facebookCredential);
   }
 
   return (
@@ -234,8 +329,15 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
             {/* Login Button */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleSignIn}>
-              <Text style={styles.loginButtonText}>Login</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, {opacity: isLoading ? 0.6 : 1}]} 
+              onPress={handleSignIn}
+              disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
             </TouchableOpacity>
             {/* Remember Me + Forgot Password */}
             <View style={styles.optionsContainer}>

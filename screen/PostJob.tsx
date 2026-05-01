@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, {useCallback, useRef, useState, useEffect} from 'react';
 import {
   View,
@@ -33,11 +34,13 @@ import Heading from './components/CommonHeader';
 import AddressDropdown from './components/AddressComponent';
 import DatePicker from 'react-native-date-picker';
 
-
-
-const AddJobScreen = ({route}) => {
+type RouteParams = {
+  updateJob?: boolean;
+  job?: any;
+};
+const AddJobScreen = ({route}: any) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const {job, updateJob} = route.params || {};
+  const {updateJob, job} = (route?.params as RouteParams) ?? {};
   const fields = ['Description', 'Deadline', 'Budget'];
   const [loading, setLoading] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState<Date | null>(
@@ -69,7 +72,7 @@ const AddJobScreen = ({route}) => {
       setSelectedAddressId(job?.address?.id || '');
       // If images exist (currently none), map their URLs
       if (job.images?.length) {
-        const imageUrls = job?.images.map(img => img); // assuming "url" exists
+        const imageUrls = job?.images.map((img: any) => img); // assuming "url" exists
         setImageUris(imageUrls);
       }
     }
@@ -143,14 +146,40 @@ const AddJobScreen = ({route}) => {
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
+    // 🔹 Description
     if (!formData['Description']?.trim()) {
       errors['Description'] = 'Description is required.';
-      errors['Budget'] = 'Budget Required';
-      errors['Deadline'] = 'Deadline Required';
     }
 
+    // 🔹 Budget
+    if (!formData['Budget']?.trim()) {
+      errors['Budget'] = 'Budget is required.';
+    }
+
+    // 🔹 Deadline
+    if (!deadlineDate) {
+      errors['Deadline'] = 'Deadline is required.';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (deadlineDate < today) {
+        errors['Deadline'] = 'Deadline cannot be in the past.';
+      }
+    }
+
+    // 🔹 Images
     if (!imageUris.length) {
       errors['Images'] = 'Please add at least one image.';
+    }
+
+    // 🔹 Job Type
+    if (!jobTypeValue) {
+      errors['JobType'] = 'Please select a job type.';
+    }
+
+    // 🔹 Address
+    if (!selectedAddressId) {
+      errors['Address'] = 'Please select an address.';
     }
 
     setErrors(errors);
@@ -234,17 +263,19 @@ const AddJobScreen = ({route}) => {
 
   return (
     <>
-      <DatePicker
-        modal
-        open={isDatePickerVisible}
-        date={deadlineDate || new Date()}
-        mode="date"
-        onConfirm={date => {
-          setDatePickerVisible(false);
-          setDeadlineDate(date);
-        }}
-        onCancel={() => setDatePickerVisible(false)}
-      />
+      {isDatePickerVisible && deadlineDate && (
+        <DatePicker
+          modal
+          open={isDatePickerVisible}
+          date={deadlineDate}
+          mode="date"
+          onConfirm={date => {
+            setDatePickerVisible(false);
+            setDeadlineDate(date);
+          }}
+          onCancel={() => setDatePickerVisible(false)}
+        />
+      )}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#6264A7" />
@@ -273,7 +304,15 @@ const AddJobScreen = ({route}) => {
         showsVerticalScrollIndicator={false}>
         <View style={{flex: 1}}>
           <View style={styles.container}>
-            <JobCategoryList value={jobTypeValue} onChange={setJobTypeValue} />
+            <View>
+              <JobCategoryList
+                value={jobTypeValue}
+                onChange={setJobTypeValue}
+              />
+              {errors['JobType'] && (
+                <Text style={styles.JobErrorText}>{errors['JobType']}</Text>
+              )}
+            </View>
             {fields.map((label, index) => {
               const multiline = isMultiline(label);
               const isError = !!errors[label];
@@ -355,7 +394,11 @@ const AddJobScreen = ({route}) => {
             <AddressDropdown
               value={selectedAddressId} // current selected address id
               onChange={setSelectedAddressId} // updates state when user picks
+              navigation={navigation}
             />
+                {errors['Address'] && (
+                <Text style={styles.JobErrorText}>{errors['Address']}</Text>
+              )}
             {/* </View> */}
 
             <View style={styles.inputCard}>
@@ -468,6 +511,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#6264A7',
     borderRadius: 12,
     padding: 2,
+  },
+  JobErrorText: {
+    marginTop: 0,
+    paddingHorizontal: 20,
+    fontSize: 12,
+    color: '#FF4D4F',
   },
   errorText: {
     marginTop: 4,

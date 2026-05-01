@@ -1,5 +1,5 @@
 import {NavigationProp, useNavigation} from '@react-navigation/native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,12 @@ import {
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fetchNewsWithoutAuth } from '../utils/fetchPosts';
 
 const NewsCard = ({item}: any) => {
   const [expanded, setExpanded] = useState(false);
+
   const descriptionWords = item.description
     ? item.description.split(/\s+/)
     : [];
@@ -24,6 +27,7 @@ const NewsCard = ({item}: any) => {
   const displayText = expanded
     ? item.description
     : descriptionWords.slice(0, 20).join(' ') + (isLong ? '...' : '');
+  
   return (
     <View style={styles.postCard}>
       {item.images?.[0] && (
@@ -55,6 +59,18 @@ const NewsCard = ({item}: any) => {
   );
 };
 
+// Footer component with loading indicator
+const FooterLoader = ({ isVisible }: { isVisible: boolean }) => {
+  if (!isVisible) return null;
+  
+  return (
+    <View style={styles.footerLoader}>
+      <ActivityIndicator size="large" color="#6264A7" />
+      <Text style={styles.loadingText}>Loading more news...</Text>
+    </View>
+  );
+};
+
 export default function NewsFeed({
   heading = 'News Feed',
   showBackButton = true,
@@ -71,26 +87,97 @@ export default function NewsFeed({
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [jobPosts, setJobPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [newsWithAuth, setNewsWithoutAuth] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+
+  const loadJobsWithoutAuth = async () => {
+    try {
+      setLoading(true);
+      const res = await fetchNewsWithoutAuth();
+      setNewsWithoutAuth(res || []);
+    } catch (error) {
+      console.error("Error loading jobs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNews = async (page: number = 1, isLoadMore: boolean = false) => {
+    try {
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const authToken = await AsyncStorage.getItem('authToken');
+      setToken(authToken);
+      
+      const url = authToken
+        ? `https://buildio.co.nz/api/news/list?page=${page}&limit=10`
+        : 'https://buildio.co.nz/api/home/news';
+
+      const headers: any = {};
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
+
+      const response = await fetch(url, {headers});
+      const data = await response.json();
+
+      const newPosts = data?.data?.data || [];
+      
+      if (isLoadMore) {
+        // Append new posts to existing ones
+        setJobPosts(prev => [...prev, ...newPosts]);
+      } else {
+        // Set initial posts
+        setJobPosts(newPosts);
+      }
+
+      // Check if we have more data
+      const totalPages = data?.data?.totalPages || 1;
+      setHasMoreData(page < totalPages);
+
+    } catch (error) {
+      console.error('Error fetching job posts:', error);
+    } finally {
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
-    fetch('https://buildio.co.nz/api/news/list?page=1&limit=10', {
-      headers: {
-        Authorization:
-          'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJyYWppbmRlckBleGFtcGxlLmNvbSIsImlhdCI6MTc1NDgyNzg2MiwiZXhwIjoxNzU1NDMyNjYyfQ.us1M3wpV900mfHMFBqA67vwmhXS1AI1uu2g2NknmB58',
-      },
-    })
-      .then(response => response.json())
-      .then(data => {
-        setJobPosts(data?.data?.data || []);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching job posts:', error);
-        setLoading(false);
-      });
+    fetchNews();
+    loadJobsWithoutAuth();
   }, []);
 
-  const limitedPosts = showBackButton ? jobPosts : jobPosts.slice(0, limit);
+  const handleLoadMore = useCallback(() => {
+    // Only load more if:
+    // 1. We have token (authenticated user)
+    // 2. Not currently loading more
+    // 3. Has more data to load
+    if (token && !loadingMore && hasMoreData) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchNews(nextPage, true);
+    }
+  }, [token, loadingMore, hasMoreData, currentPage]);
+
+  const onEndReached = useCallback(() => {
+    handleLoadMore();
+  }, [handleLoadMore]);
+
+  // Determine which data to show
+  const dataToShow = token 
+    ? (showBackButton ? jobPosts : jobPosts?.slice(0, limit))
+    : newsWithAuth?.data || [];
 
   return (
     <View style={styles.container}>
@@ -111,11 +198,18 @@ export default function NewsFeed({
           </View>
 
           <FlatList
-            data={limitedPosts}
+            data={dataToShow}
             keyExtractor={item => String(item.id)}
             renderItem={({item}) => <NewsCard item={item} />}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.1} // Trigger when 10% from bottom
+            ListFooterComponent={<FooterLoader isVisible={loadingMore && hasMoreData} />}
+            removeClippedSubviews={true} // Optimize for large lists
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={10}
           />
 
           {showHeading && <View style={{height: 100}} />}
@@ -125,6 +219,7 @@ export default function NewsFeed({
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#fff'},
@@ -137,6 +232,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     padding: 12,
     borderRadius: 10,
+  },
+    footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+   loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#6264A7',
+    textAlign: 'center',
   },
   postImage: {width: '100%', height: 150, borderRadius: 10},
   postText: {marginTop: 10, fontSize: 14},

@@ -8,6 +8,7 @@ import {
   Image,
   Text,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import {createMaterialTopTabNavigator} from '@react-navigation/material-top-tabs';
 import PostFeed from '../PickJob';
@@ -29,52 +30,82 @@ export default function TopTabsComponent() {
   const [myJobs, setMyJobs] = useState([]);
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myJobsLoaded, setMyJobsLoaded] = useState(false);
+  const [appliedJobsLoaded, setAppliedJobsLoaded] = useState(false);
+
   useEffect(() => {
     const loadJobs = async () => {
-      setLoading(true);
-      const result = await fetchMyJobs();
-      if (result.success) {
-        const jobs = result.data;
-
-        // Filter based on how your API marks applied vs. created jobs
-        // console.log(jobs,jobs);
-
-        setMyJobs(jobs);
-        // setAppliedJobs(appliedJobsList);
-      } else {
-        console.warn('Error loading jobs:', result.error);
+      try {
+        const result = await fetchMyJobs();
+        if (result.success) {
+          const jobs = result.data;
+          console.log(jobs, 'my jobs');
+          setMyJobs(jobs || []);
+        } else {
+          console.warn('Error loading jobs:', result.error);
+          setMyJobs([]);
+        }
+      } catch (error) {
+        console.error('Failed to load my jobs:', error);
+        setMyJobs([]);
+      } finally {
+        setMyJobsLoaded(true);
       }
-      setLoading(false);
     };
 
     loadJobs();
   }, []);
+
   useFocusEffect(
     useCallback(() => {
       setModalVisible(false);
-
-      // On focus, close the modal
     }, []),
   );
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const data = await getAppliedJobs();
-        setAppliedJobs(data?.data || []);
+        const result = await getAppliedJobs();
+        if (result.success) {
+          setAppliedJobs(result.data || []);
+        } else {
+          console.warn('Error loading applied jobs:', result.error);
+          setAppliedJobs([]);
+        }
       } catch (error) {
-        console.log('Failed to load jobs');
+        console.log('Failed to load applied jobs:', error);
+        setAppliedJobs([]);
       } finally {
-        setLoading(false);
+        setAppliedJobsLoaded(true);
       }
     };
 
     fetchJobs();
   }, []);
-  console.log(appliedJobs,'applied jobs')
-    console.log(myJobs,'myJobs')
 
- 
+  // Set overall loading to false when both have finished loading
+  useEffect(() => {
+    if (myJobsLoaded && appliedJobsLoaded) {
+      setLoading(false);
+    }
+  }, [myJobsLoaded, appliedJobsLoaded]);
+  // Set overall loading to false when both have finished loading
+  useEffect(() => {
+    if (myJobsLoaded && appliedJobsLoaded) {
+      setLoading(false);
+    }
+  }, [myJobsLoaded, appliedJobsLoaded]);
+
+  // Show loading only while waiting for both jobs to load
+  if (loading) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator size="large" color="#6264A7" />
+        <Text style={{marginTop: 10}}>Loading jobs...</Text>
+      </View>
+    );
+  }
+
   return (
     <>
       <TopBar />
@@ -124,7 +155,7 @@ export default function TopTabsComponent() {
                 showBottomBar={true}
                 showHeader={false}
                 showBackButton={false}
-                myJobs ={appliedJobs}
+                myJobs={appliedJobs}
               />
             )}
           />

@@ -28,7 +28,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 
 const AddressForm = () => {
   const route = useRoute();
-  const {mode, address} = route.params || {};
+  const {mode, address, fromPostJob} = route.params || {};
   const scrollViewRef = useRef(null);
 
   const [loadingLocation, setLoadingLocation] = useState(false);
@@ -40,7 +40,7 @@ const AddressForm = () => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const [addressForm, setAddressForm] = useState({
-    map_Text: '',
+    map_text: '',
     label: '',
     apartment: '',
     building: '',
@@ -48,6 +48,8 @@ const AddressForm = () => {
     latitude: null,
     longitude: null,
   });
+
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
@@ -65,16 +67,36 @@ const AddressForm = () => {
   const handleUseCurrentLocation = () => {
     setLoadingLocation(true);
     Geolocation.getCurrentPosition(
-      position => {
+      async position => {
         const {latitude, longitude} = position.coords;
         setLocation({latitude, longitude});
 
-        setAddressForm(prev => ({
-          ...prev,
-          latitude,
-          longitude,
-          map_Text: address || '',
-        }));
+        try {
+          // Call Google Geocoding API
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`,
+          );
+          const data = await response.json();
+
+          let readableAddress = '';
+          if (data.results && data.results.length > 0) {
+            readableAddress = data.results[0].formatted_address;
+          }
+
+          setAddressForm(prev => ({
+            ...prev,
+            latitude,
+            longitude,
+            map_text: readableAddress, // ✅ auto-fill map_text
+          }));
+        } catch (err) {
+          console.warn('Reverse geocoding failed:', err);
+          setAddressForm(prev => ({
+            ...prev,
+            latitude,
+            longitude,
+          }));
+        }
 
         setLoadingLocation(false);
       },
@@ -94,27 +116,35 @@ const AddressForm = () => {
     );
   };
 
-  useEffect(() => {
-    const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () =>
-      setKeyboardVisible(true),
-    );
-    const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () =>
-      setKeyboardVisible(false),
-    );
-
-    return () => {
-      keyboardDidShow.remove();
-      keyboardDidHide.remove();
-    };
-  }, []);
-
   const handleInputChange = (field, value) => {
     setAddressForm(prev => ({...prev, [field]: value}));
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const updated = {...prev};
+        delete updated[field];
+        return updated;
+      });
+    }
+  };
+
+  // Validate required fields locally
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!addressForm.map_text || addressForm.map_text.trim() === '') {
+      errors.map_text = 'Address is required';
+    }
+    if (!addressForm.label || addressForm.label.trim() === '') {
+      errors.label = 'Label is required';
+    }
+    
+    return errors;
   };
   React.useEffect(() => {
     if (address) {
       setAddressForm({
-        map_Text: address.map_Text,
+        map_text: address.map_text,
         label: address.label || '',
         apartment: address.apartment || '',
         building: address.building || '',
@@ -130,15 +160,31 @@ const AddressForm = () => {
     }
   }, [address]);
   const handleSaveAddress = async () => {
-    const token = await AsyncStorage.getItem('authToken');
-    if (!token) {
-      Alert.alert('Auth Error', 'User not authenticated.');
+    console.log('hello');
+    
+    // Validate required fields locally
+    const localErrors = validateForm();
+    if (Object.keys(localErrors).length > 0) {
+      setValidationErrors(localErrors);
+      setModalContent({
+        title: 'Validation Error',
+        message: 'Please fill all required fields',
+      });
+      setModalVisible(true);
       return;
     }
+    
+    const token = await AsyncStorage.getItem('authToken');
+    // if (!token) {
+    //   Alert.alert('Auth Error', 'User not authenticated.');
+    //   return;
+    // }
     setLoading(true);
+    setValidationErrors({}); // Clear previous errors
+    
     const payload = {
       ...addressForm,
-      map_Text: typeof addressForm.map_Text === 'string' ? addressForm.map_Text : '',
+      map_text: addressForm.map_text || '',
       lat: location?.latitude ? String(location.latitude) : '',
       long: location?.longitude ? String(location.longitude) : '',
     };
@@ -163,27 +209,56 @@ const AddressForm = () => {
       const result = await response.json();
       if (response.ok) {
         setLoading(false);
+        setValidationErrors({});
         setModalContent({
           title: 'Success',
           message: mode === 'update' ? 'Address updated' : 'Address added',
         });
         setModalVisible(true);
-        navigation.navigate('ManageAddressScreen');
+        // Navigate back after showing success message
+        setTimeout(() => {
+          if (fromPostJob) {
+            // Go back to the previous screen (PostJob)
+            navigation.goBack();
+          } else {
+            // Go to ManageAddressScreen
+            navigation.navigate('ManageAddressScreen');
+          }
+        }, 1000);
       } else {
-        setModalContent({
-          title: 'Error',
-          message: result.message || 'Failed to save address',
-        });
-        setModalVisible(true);
         setLoading(false);
+        
+        // Handle field-level validation errors from backend
+        if (result.errors && typeof result.errors === 'object') {
+          // Backend returned field-specific errors
+          setValidationErrors(result.errors);
+          
+          // Create message from all errors
+          const errorMessages = Object.entries(result.errors)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join('\n');
+          
+          setModalContent({
+            title: 'Validation Error',
+            message: errorMessages || result.message || 'Failed to save address',
+          });
+        } else {
+          // Backend returned a general error message
+          setModalContent({
+            title: 'Error',
+            message: result.message || 'Failed to save address',
+          });
+        }
+        
+        setModalVisible(true);
       }
     } catch (error) {
+      setLoading(false);
       setModalContent({
         title: 'Network Error',
         message: 'Unable to connect to server.',
       });
       setModalVisible(true);
-      setLoading(false);
     }
   };
   //  <GooglePlacesAutocomplete
@@ -237,6 +312,7 @@ const AddressForm = () => {
             <View style={styles.formWrapper}>
               <GooglePlacesAutocomplete
                 placeholder="Where to?"
+                placeholderTextColor="#888"
                 fetchDetails={true}
                 debounce={200}
                 enablePoweredByContainer={true}
@@ -266,13 +342,13 @@ const AddressForm = () => {
 
                     setAddressForm(prev => ({
                       ...prev,
-                      map_Text: address,   // Optional: You could use this or keep it separate
+                      map_text: address, // this is what API needs
                       latitude,
                       longitude,
                     }));
                   }
 
-                  handleInputChange('address_line1', address); // Optional if you want to store address line
+                  -handleInputChange('address_line1', address);
                 }}
                 predefinedPlaces={[]}
                 predefinedPlacesAlwaysVisible={false}
@@ -336,7 +412,7 @@ const AddressForm = () => {
                 // )}
 
                 textInputProps={{
-                  placeholderTextColor: 'gray',
+                  placeholderTextColor: 'black',
                   onFocus: () => {
                     setTimeout(() => {
                       scrollViewRef.current?.scrollTo({
@@ -379,36 +455,56 @@ const AddressForm = () => {
               )}
               <TextInput
                 placeholder="Your Current Address"
-                value={addressForm.map_Text}
-                onChangeText={text => handleInputChange('map_Text', text)}
-                style={styles.input}
+                placeholderTextColor="#888"
+                value={addressForm.map_text}
+                onChangeText={text => handleInputChange('map_text', text)}
+                style={[styles.input, validationErrors.map_text ? styles.inputError : null]}
               />
+              {validationErrors.map_text && (
+                <Text style={styles.errorText}>{validationErrors.map_text}</Text>
+              )}
               <TextInput
                 placeholder="Label (e.g., Home, Work)"
+                placeholderTextColor="#888"
                 value={addressForm.label}
                 onChangeText={text => handleInputChange('label', text)}
-                style={styles.input}
+                style={[styles.input, validationErrors.label ? styles.inputError : null]}
               />
+              {validationErrors.label && (
+                <Text style={styles.errorText}>{validationErrors.label}</Text>
+              )}
               <TextInput
                 placeholder="Apartment, suite, etc."
+                placeholderTextColor="#888"
                 value={addressForm.apartment}
                 onChangeText={text => handleInputChange('apartment', text)}
-                style={styles.input}
+                style={[styles.input, validationErrors.apartment ? styles.inputError : null]}
               />
+              {validationErrors.apartment && (
+                <Text style={styles.errorText}>{validationErrors.apartment}</Text>
+              )}
               <TextInput
                 placeholder="Building Name"
+                placeholderTextColor="#888"
                 value={addressForm.building}
                 onChangeText={text => handleInputChange('building', text)}
-                style={styles.input}
+                style={[styles.input, validationErrors.building ? styles.inputError : null]}
               />
+              {validationErrors.building && (
+                <Text style={styles.errorText}>{validationErrors.building}</Text>
+              )}
               <TextInput
                 placeholder="Notes"
+                placeholderTextColor="#888"
                 value={addressForm.notes}
                 onChangeText={text => handleInputChange('notes', text)}
-                style={[styles.input, {height: 100, textAlignVertical: 'top'}]}
+                style={[styles.input, {height: 100, textAlignVertical: 'top'}, validationErrors.notes ? styles.inputError : null]}
                 multiline
                 numberOfLines={4}
               />
+              {validationErrors.notes && (
+                <Text style={styles.errorText}>{validationErrors.notes}</Text>
+              )}
 
               <TouchableOpacity
                 style={styles.saveButton}
@@ -501,6 +597,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
+  },
+  inputError: {
+    borderColor: '#ff6b6b',
+    borderWidth: 1.5,
+    backgroundColor: '#fff5f5',
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: -8,
+    marginBottom: 12,
+    marginLeft: 10,
   },
 });
 

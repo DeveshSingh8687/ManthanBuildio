@@ -5,10 +5,22 @@ import TopBar from '../components/TopBar';
 import BottomTabBar from '../components/BottomNavigaionBar';
 import Heading from '../components/CommonHeader';
 const aboutData = {
-    "title": "About Us",
-    "content": "Lorem ipsum dolor sit amet consectetur. Nibh lobortis id pellentesque blandit. Sit praesent ornare eget pretium suspendisse a sagittis amet ac. Pulvinar gravida velit aliquet nulla arcu. Platea gravida amet rutrum quam phasellus hac eu aliquam. Proin sit laoreet eu dapibus curabitur elit. Integer non tempus malesuada nibh id lectus ut. Lorem ipsum dolor sit amet consectetur. Nibh lobortis id pellentesque blandit. Sit praesent ornare eget pretium suspendisse a sagittis amet ac. Pulvinar gravida velit aliquet nulla arcu. Platea gravida amet rutrum quam phasellus hac eu aliquam. Proin sit laoreet eu dapibus curabitur elit. Integer non tempus malesuada nibh id lectus ut.",
-    "footerText": "BUILDIO\nInnovating the way you build"
-  }
+  title: "About Us",
+  content: "Buildio is an innovative online information marketplace designed specifically for the construction industry. Our platform connects individuals and businesses who need construction-related services with skilled professionals ready to deliver quality work. Users can post tasks, respond to opportunities, share updates, and manage work-related activities efficiently within a transparent and collaborative environment. Buildio simplifies communication and creates opportunities by bringing the construction community together in one trusted digital space. We are committed to making project coordination easier, improving visibility, and empowering users to build smarter and more efficiently.",
+  footerText: "BUILDIO\nInnovating the way you build"
+}
+
+const content = [
+  "Buildio is an online information marketplace.",
+  "Users may post construction-related tasks.",
+  "Users may respond to and accept tasks.",
+  "Users may publish work-related updates or logs.",
+  "Buildio Limited does not provide construction services.",
+  "Buildio Limited is not a contractor, subcontractor, or consultant.",
+  "Buildio Limited is not a party to any agreement between users.",
+  "Buildio Limited does not supervise or manage any works.",
+  "All agreements are made solely between users."
+];
   type Props = {
     navigation: {
       goBack: () => void;

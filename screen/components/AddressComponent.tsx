@@ -10,10 +10,11 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { fetchUserAddresses } from '../../utils/addressApi';
- // adjust path as needed
+import { useFocusEffect } from '@react-navigation/native';
 
-const AddressDropdown = ({ value, onChange }: { value: any; onChange: (val: any) => void }) => {
+const AddressDropdown = ({ value, onChange, navigation }: { value: any; onChange: (val: any) => void; navigation?: any }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [addresses, setAddresses] = useState<any[]>([]);
@@ -41,8 +42,15 @@ const AddressDropdown = ({ value, onChange }: { value: any; onChange: (val: any)
     fetchAddresses();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      // Refresh addresses whenever the screen comes into focus
+      fetchAddresses();
+    }, []),
+  );
+
   useEffect(() => {
-    if (addresses.length === 0) return;
+    if (addresses.length === 0) {return;}
     const matched = addresses.find(addr => addr.id === value);
     if (matched) {
       setSelectedItemName(`${matched.label} (${matched.building})`);
@@ -76,6 +84,30 @@ const AddressDropdown = ({ value, onChange }: { value: any; onChange: (val: any)
 
       <Modal visible={modalVisible} animationType="slide">
         <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Address</Text>
+            {navigation && (
+              // <TouchableOpacity
+              //   style={styles.addAddressButton}
+              //   onPress={() => {
+              //     setModalVisible(false);
+              //     navigation.navigate('AddressPicker', { fromPostJob: true });
+              //   }}>
+              //   {/* <Icon name="plus" size={20} color="#fff" /> */}
+              //   <Text style={styles.addAddressText}>Add Address</Text>
+              // </TouchableOpacity>
+                <TouchableOpacity
+                        style={styles.addRow}
+                        onPress={() => {
+                  setModalVisible(false);
+                  navigation.navigate('AddressPicker', { fromPostJob: true });
+                }}>
+                        <Icon name="add-circle-outline" size={20} color="#6264A7" />
+                        <Text style={styles.addText}>Add another address</Text>
+                      </TouchableOpacity>
+            )}
+          </View>
+
           <TextInput
             style={styles.searchInput}
             placeholder="Search..."
@@ -95,6 +127,7 @@ const AddressDropdown = ({ value, onChange }: { value: any; onChange: (val: any)
                     • {item.label} ({item.building})
                   </Text>
                 </TouchableOpacity>
+
               )}
             />
           )}
@@ -125,6 +158,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+    addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+    // backgroundColor: '#f7f7f7',
+  },
+    addText: {marginLeft: 8, color: '#6264A7', fontSize: 16},
+
   label: {
     fontWeight: 'bold',
     fontSize: 14,
@@ -142,6 +185,31 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  addAddressButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6264A7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  addAddressText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
   },
   searchInput: {
     height: 40,

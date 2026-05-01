@@ -19,6 +19,8 @@ import {Icon} from 'react-native-elements';
 
 import {_signInWithGoogle, onFacebookButtonPress} from './config/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Heading from './components/CommonHeader';
+import {addDeviceId} from '../utils/fcmToken';
 
 export default function SignUpScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -34,6 +36,8 @@ export default function SignUpScreen() {
     setFormData(prev => ({...prev, [field]: value}));
   };
   async function onGoogleButtonPress() {
+    // const fcmToken = await AsyncStorage.getItem('fcmToken');
+    // await addDeviceId(fcmToken);
     _signInWithGoogle(navigation);
   }
 
@@ -88,18 +92,56 @@ export default function SignUpScreen() {
       });
 
       if (response.ok) {
+        // const fcmToken = await AsyncStorage.getItem('fcmToken');
+        // await addDeviceId(fcmToken);
         const data = await response.json();
         const token = data.data?.token;
+        const userId = data.data?.user?.id;
+        const isTermsAccepted = data.data?.user?.is_terms_accepted;
         console.log('Sign-up successful:', token);
 
         if (token) {
           await AsyncStorage.setItem('authToken', token);
 
-          Alert.alert('Success', 'User signed up successfully!');
-          navigation.reset({
-            index: 0,
-            routes: [{name: 'HomeScreen'}],
-          });
+          // Save user data
+          await AsyncStorage.setItem('firstName', firstName || '');
+          if (lastName) {
+            await AsyncStorage.setItem('lastName', lastName);
+          }
+          if (userId) {
+            await AsyncStorage.setItem('USERID', userId.toString());
+          }
+          await AsyncStorage.setItem('EMAIL', email);
+
+          // Save terms acceptance status from signup response
+          await AsyncStorage.setItem('is_terms_accepted', isTermsAccepted ? 'true' : 'false');
+          
+          if (isTermsAccepted === true) {
+            Alert.alert('Success', 'User signed up successfully!', [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.reset({
+                    index: 0,
+                    routes: [{name: 'HomeScreen'}],
+                  });
+                },
+              },
+            ]);
+          } else {
+            // Navigate to PrivacySecurityScreen if terms not accepted
+            Alert.alert('Success', 'User signed up successfully!', [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.reset({
+                    index: 0,
+                    routes: [{name: 'PrivacySecurity'}],
+                  });
+                },
+              },
+            ]);
+          }
         } else {
           Alert.alert('Error', 'No token returned from server');
         }
@@ -132,7 +174,8 @@ export default function SignUpScreen() {
             {/* <Icon name="arrow-back" size={28} color="#333" /> */}
           </TouchableOpacity>
 
-          <Text style={styles.title}>Sign up</Text>
+          {/* <Text style={styles.title}>Sign up</Text> */}
+          <Heading>Sign up</Heading>
 
           <TextInput
             style={styles.input}
@@ -227,7 +270,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   title: {
- marginTop: 10,
+    marginTop: 10,
     fontSize: 14,
     fontWeight: '600',
     left: '32%',

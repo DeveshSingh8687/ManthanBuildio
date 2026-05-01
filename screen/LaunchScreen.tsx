@@ -19,22 +19,42 @@ export default function LaunchScreen() {
   useEffect(() => {
     const checkAndRedirect = async () => {
       try {
-        const hasSeenIntro = await AsyncStorage.getItem('prefs:hasSeenIntro');
+        // First check if user is already logged in (has authToken)
+        const authToken = await AsyncStorage.getItem('authToken');
+
         // Fade out animation
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 1000,
           useNativeDriver: true,
         }).start(() => {
-          if (hasSeenIntro === 'true') {
-            navigation.replace('HomeScreen');
+          if (authToken) {
+            // User is logged in, check terms acceptance
+            AsyncStorage.getItem('is_terms_accepted').then((termsAccepted) => {
+              if (termsAccepted === 'true') {
+                // Terms accepted, go to home
+                navigation.replace('HomeScreen');
+              } else {
+                // Terms not accepted, need to accept first
+                navigation.replace('PrivacySecurity');
+              }
+            });
           } else {
-            navigation.replace('Welcome');
+            // User is not logged in, check if they've seen intro
+            AsyncStorage.getItem('prefs:hasSeenIntro').then((hasSeenIntro) => {
+              if (hasSeenIntro === 'true') {
+                // They've seen intro, take them to login
+                navigation.replace('Login');
+              } else {
+                // First time user, show welcome/intro screens
+                navigation.replace('Welcome');
+              }
+            });
           }
         });
       } catch (error) {
         console.log('Error checking user login status:', error);
-        navigation.replace('Welcome'); // fallback
+        navigation.replace('Welcome'); // fallback to Welcome
       }
     };
 

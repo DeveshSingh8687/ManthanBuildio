@@ -16,10 +16,20 @@ import {
   Dimensions,
   ActivityIndicator,
   Linking,
+  PermissionsAndroid,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useRoute} from '@react-navigation/native';
-import fireStore from '@react-native-firebase/firestore';
+import fireStore, {
+  arrayUnion,
+  collection,
+  firebase,
+  FirebaseFirestoreTypes,
+  getDocs,
+  query,
+  where,
+  writeBatch,
+} from '@react-native-firebase/firestore';
 import TopBar from './components/TopBar';
 import storage from '@react-native-firebase/storage';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
@@ -27,6 +37,7 @@ import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 // import EmojiSelector, {Categories} from 'react-native-emoji-selector';
 import {pick, types, isCancel} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {width, height} = Dimensions.get('window');
 
@@ -48,12 +59,23 @@ type Message = {
   imageUrl?: string;
 };
 
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+
 const ChatScreen = () => {
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const {myChatId, data} = route.params as {
     myChatId: string;
-    data: {id: string; first_name: string; last_name: string; name: string};
+    data: {
+      email: string;
+      id: string;
+      first_name: string;
+      last_name: string;
+      name: string;
+      profile_picture: string;
+    };
   };
+  console.log(data);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
@@ -61,6 +83,7 @@ const ChatScreen = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  console.log(messages);
 
   // New states for image preview modal
   const [imagePreviewModal, setImagePreviewModal] = useState(false);
@@ -123,8 +146,9 @@ const ChatScreen = () => {
 
   const flatListRef = useRef<FlatList>(null);
 
-  const chatIdA = `${data.id}${myChatId}`;
-  const chatIdB = `${myChatId}${data.id}`;
+  const chatIdA = `${data?.id}${myChatId}`;
+  const chatIdB = `${myChatId}${data?.id}`;
+  // console.log(chatIdA,chatIdB,'hello')
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -144,26 +168,38 @@ const ChatScreen = () => {
     const hideEvent =
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const keyboardWillShowSub = Keyboard.addListener(showEvent, (e: any) => {
-      setKeyboardHeight(e.endCoordinates.height);
-      scrollToBottom();
+    const showSub = Keyboard.addListener(showEvent, () => {
+      // Small delay ensures layout is updated before scrolling
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({animated: true});
+      }, 100);
     });
 
-    const keyboardWillHideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({animated: true});
+      }, 100);
     });
 
     return () => {
-      keyboardWillShowSub.remove();
-      keyboardWillHideSub.remove();
+      showSub.remove();
+      hideSub.remove();
     };
-  }, [scrollToBottom]);
+  }, []);
+
+  // For new chat opening
+  useEffect(() => {
+    scrollToBottom();
+  }, []);
   const downloadDocument = async (attachment: any, messageId: string) => {
     try {
       // Request permission first
       const hasPermission = await requestStoragePermission();
       if (!hasPermission) {
-        Alert.alert('Permission Denied', 'Storage permission is required to download files.');
+        Alert.alert(
+          'Permission Denied',
+          'Storage permission is required to download files.',
+        );
         return;
       }
 
@@ -172,15 +208,17 @@ const ChatScreen = () => {
 
       // Get file extension
       const fileExtension = attachment.name.split('.').pop() || 'file';
-      const fileName = attachment.name || `document_${Date.now()}.${fileExtension}`;
+      const fileName =
+        attachment.name || `document_${Date.now()}.${fileExtension}`;
 
       // Determine download path
-      const downloadPath = Platform.OS === 'ios' 
-        ? `${RNFS.DocumentDirectoryPath}/${fileName}`
-        : `${RNFS.DownloadDirectoryPath}/${fileName}`;
+      const downloadPath =
+        Platform.OS === 'ios'
+          ? `${RNFS.DocumentDirectoryPath}/${fileName}`
+          : `${RNFS.DownloadDirectoryPath}/${fileName}`;
 
-      console.log('Downloading to:', downloadPath);
-      console.log('Download URL:', attachment.uri);
+      // console.log('Downloading to:', downloadPath);
+      // console.log('Download URL:', attachment.uri);
 
       // Download the file
       const downloadResult = await RNFS.downloadFile({
@@ -188,7 +226,7 @@ const ChatScreen = () => {
         toFile: downloadPath,
         background: true,
         discretionary: true,
-        progress: (res) => {
+        progress: res => {
           const progress = (res.bytesWritten / res.contentLength) * 100;
           console.log('Download progress:', progress.toFixed(2) + '%');
         },
@@ -200,45 +238,51 @@ const ChatScreen = () => {
       if (downloadResult.statusCode === 200) {
         Alert.alert(
           'Download Complete',
-          `File saved to: ${Platform.OS === 'ios' ? 'Files app' : 'Downloads folder'}`,
+          `File saved to: ${
+            Platform.OS === 'ios' ? 'Files app' : 'Downloads folder'
+          }`,
           [
-            { text: 'OK' },
-            Platform.OS === 'android' ? {
-              text: 'Open Folder',
-              onPress: () => {
-                // Open file manager to downloads folder
-                Linking.openURL('content://com.android.externalstorage.documents/document/primary%3ADownload')
-                  .catch(() => {
-                    Alert.alert('Info', 'Please check your Downloads folder');
-                  });
-              }
-            } : undefined
-          ].filter(Boolean)
+            {text: 'OK'},
+            Platform.OS === 'android'
+              ? {
+                  text: 'Open Folder',
+                  onPress: () => {
+                    // Open file manager to downloads folder
+                    Linking.openURL(
+                      'content://com.android.externalstorage.documents/document/primary%3ADownload',
+                    ).catch(() => {
+                      Alert.alert('Info', 'Please check your Downloads folder');
+                    });
+                  },
+                }
+              : undefined,
+          ].filter(Boolean),
         );
 
         console.log('Download successful:', downloadPath);
       } else {
-        throw new Error(`Download failed with status: ${downloadResult.statusCode}`);
+        throw new Error(
+          `Download failed with status: ${downloadResult.statusCode}`,
+        );
       }
-
     } catch (error) {
       console.error('Download error:', error);
       setDownloadingDocuments(prev => ({...prev, [messageId]: false}));
-      
+
       Alert.alert(
         'Download Failed',
         'Unable to download the file. Please check your internet connection and try again.',
         [
-          { text: 'OK' },
+          {text: 'OK'},
           {
             text: 'Open in Browser',
             onPress: () => {
               Linking.openURL(attachment.uri).catch(() => {
                 Alert.alert('Error', 'Unable to open file');
               });
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     }
   };
@@ -302,7 +346,7 @@ const ChatScreen = () => {
         type: [types.allFiles], // same as DocumentPicker.types.allFiles
         allowMultiSelection: false,
       });
-      console.log(result);
+      // console.log(result);
       if (result && result.length > 0) {
         setSelectedDocument(result[0]); // result is an array of picked files
         setDocumentPreviewModal(true);
@@ -318,11 +362,12 @@ const ChatScreen = () => {
 
   const sendDocumentFromPreview = async () => {
     if (!selectedDocument) return;
+    setLoading(true);
 
     try {
       console.log('Uploading document...');
 
-      const chatId = generateChatId(myChatId, data.id);
+      const chatId = generateChatId(myChatId, data?.id);
       const chatRef = fireStore().collection('chats').doc(chatId);
       const fileName = `${Date.now()}_${selectedDocument.name}`;
 
@@ -341,7 +386,7 @@ const ChatScreen = () => {
 
       const documentMessage = {
         sendBy: myChatId,
-        sendTo: data.id,
+        sendTo: data?.id,
         message: '',
         attachment: {
           name: selectedDocument.name,
@@ -361,7 +406,7 @@ const ChatScreen = () => {
       batch.set(
         chatRef,
         {
-          members: [myChatId, data.id],
+          members: [myChatId, data?.id],
           lastMessage: `📄 ${selectedDocument.name}`,
           lastMessageTime: fireStore.FieldValue.serverTimestamp(),
           createdAt: fireStore.FieldValue.serverTimestamp(),
@@ -378,35 +423,57 @@ const ChatScreen = () => {
     } catch (error) {
       console.error('Error sending document:', error);
       Alert.alert('Error', 'Failed to send document. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!myChatId || !data?.id) {
-      console.log('inthere');
+      console.log('Missing chat participants');
+      return;
     }
 
-    const chatId = generateChatId(myChatId, data.id);
+    const generateChatId = (userId1: string, userId2: string) => {
+      return [userId1, userId2].sort().join('_');
+    };
+
+    const chatId = generateChatId(myChatId, data?.id);
 
     const unsubscribe = fireStore()
       .collection('chats')
       .doc(chatId)
       .collection('messages')
       .orderBy('createdAt', 'asc')
-      .onSnapshot(snapshot => {
-        const fetchedMessages = snapshot.docs
-          .map(doc => ({
-            id: doc.id,
-            ...(doc.data() as Omit<Message, 'id'>),
-          }))
-          .filter(msg => msg.createdAt instanceof Date || !!msg.createdAt);
+      .onSnapshot(
+        snapshot => {
+          const fetchedMessages = snapshot.docs
+            .map(doc => ({
+              id: doc.id,
+              ...(doc.data() as Omit<Message, 'id'>),
+            }))
+            .filter(msg => msg.createdAt instanceof Date || !!msg.createdAt);
 
-        setMessages(fetchedMessages);
-        scrollToBottom?.();
-      });
+          setMessages(fetchedMessages);
+
+          // Small delay to ensure FlatList has rendered new messages
+          setTimeout(() => {
+            scrollToBottom();
+          }, 100);
+
+          // Mark messages as read when the chat detail screen is active
+          // if (fetchedMessages.length > 0) {
+          //   const lastMessage = fetchedMessages[fetchedMessages.length - 1];
+          //   saveLastReadMessage(chatId, lastMessage.id);
+          // }
+        },
+        error => {
+          console.error('Error fetching messages:', error);
+        },
+      );
 
     return unsubscribe;
-  }, [myChatId, data?.id]);
+  }, [myChatId, data?.id, scrollToBottom]);
 
   // Updated sendImage function to show preview modal
   const sendImage = async () => {
@@ -422,9 +489,17 @@ const ChatScreen = () => {
       setImagePreviewModal(true);
     });
   };
-
+const requestCameraPermission = async () => {
+  const granted = await PermissionsAndroid.request(
+    PermissionsAndroid.PERMISSIONS.CAMERA
+  );
+  return granted === PermissionsAndroid.RESULTS.GRANTED;
+};
   // Updated handleCamera function to show preview modal
-  const handleCamera = () => {
+const handleCamera = async () => {
+      const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {return;}
+
     launchCamera({mediaType: 'photo', quality: 0.8}, response => {
       if (response.didCancel || response.errorCode) return;
 
@@ -438,12 +513,67 @@ const ChatScreen = () => {
     });
   };
 
+  //   const markMessagesAsRead = async (chatId: string, currentUserId: string) => {
+  //   try {
+  //     // First get messages from other users only
+  //     const messagesSnapshot = await fireStore()
+  //       .collection('chats')
+  //       .doc(chatId)
+  //       .collection('messages')
+  //       .where('sendBy', '!=', currentUserId)
+  //       .get();
+
+  //     if (messagesSnapshot.empty) return;
+
+  //     const batch = fireStore().batch();
+  //     let updateCount = 0;
+
+  //     // Filter in memory for status and update
+  //     messagesSnapshot.docs.forEach(doc => {
+  //       const messageData = doc.data();
+  //       if (messageData.status === 'sent' || messageData.status === 'delivered') {
+  //         batch.update(doc.ref, { status: 'read' });
+  //         updateCount++;
+  //       }
+  //     });
+
+  //     if (updateCount > 0) {
+  //       await batch.commit();
+  //       console.log(`${updateCount} messages marked as read`);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error marking messages as read:', error);
+  //   }
+  // };
+  // const getUnreadMessageCount = async (chatId: string, userId: string) => {
+  //   try {
+  //     // Get all messages from other users
+  //     const messagesSnapshot = await fireStore()
+  //       .collection('chats')
+  //       .doc(chatId)
+  //       .collection('messages')
+  //       .where('sendBy', '!=', userId)
+  //       .get();
+
+  //     // Filter in memory for unread messages
+  //     const unreadMessages = messagesSnapshot.docs.filter(doc => {
+  //       const messageData = doc.data();
+  //       return messageData.status === 'sent' || messageData.status === 'delivered';
+  //     });
+
+  //     return unreadMessages.length;
+  //   } catch (error) {
+  //     console.error('Error getting unread count:', error);
+  //     return 0;
+  //   }
+  // };
+
   // Function to actually send the image after preview
   const sendImageFromPreview = async () => {
     if (!previewImageUri) return;
     setLoading(true);
 
-    const chatId = generateChatId(myChatId, data.id);
+    const chatId = generateChatId(myChatId, data?.id);
     const chatRef = fireStore().collection('chats').doc(chatId);
     const fileName = `IMG_${Date.now()}.jpg`;
     const imageUrl = await uploadImageToStorage(previewImageUri, fileName);
@@ -460,6 +590,7 @@ const ChatScreen = () => {
     const batch = fireStore().batch();
     const messageRef = chatRef.collection('messages').doc();
     batch.set(messageRef, imageMessage);
+    console.log(myChatId, data?.id);
 
     // Update chat metadata
     batch.set(
@@ -481,20 +612,39 @@ const ChatScreen = () => {
     setPreviewImageUri('');
     setPreviewImageCaption('');
   };
-
+  // const saveLastReadMessage = async (chatId: string, messageId: string) => {
+  //   try {
+  //     const lastReadData = await AsyncStorage.getItem('lastReadMessages');
+  //     const lastReadMessages = lastReadData ? JSON.parse(lastReadData) : {};
+  //     const updatedLastRead = {
+  //       ...lastReadMessages,
+  //       [chatId]: messageId,
+  //     };
+  //     await AsyncStorage.setItem('lastReadMessages', JSON.stringify(updatedLastRead));
+  //   } catch (error) {
+  //     console.error('Error saving last read message:', error);
+  //   }
+  // };
   const sendMessage = async () => {
     const trimmed = inputText.trim();
     if (!trimmed) return;
 
+    // Generate consistent chat ID
+    const generateChatId = (userId1: string, userId2: string) => {
+      return [userId1, userId2].sort().join('_');
+    };
+
     const chatId = generateChatId(myChatId, data.id);
     const chatRef = fireStore().collection('chats').doc(chatId);
+    // console.log(myChatId, data.id, 'chats....');
 
     const newMessage = {
       sendBy: myChatId,
       sendTo: data.id,
       message: trimmed,
       createdAt: fireStore.FieldValue.serverTimestamp(),
-      status: 'sent',
+      status: 'unread',
+      messageType: 'text', // Add message type for filtering
     };
 
     setInputText('');
@@ -503,18 +653,55 @@ const ChatScreen = () => {
     const messageRef = chatRef.collection('messages').doc();
     batch.set(messageRef, newMessage);
 
+    // Update chat document with latest message info
     batch.set(
       chatRef,
       {
-        members: [myChatId, data.id],
+        participants: [myChatId, data.id],
         lastMessage: trimmed,
         lastMessageTime: fireStore.FieldValue.serverTimestamp(),
+        lastMessageBy: myChatId,
         createdAt: fireStore.FieldValue.serverTimestamp(),
+        userInfo: {
+          [myChatId]: {
+            name:
+              `${data.first_name || ''} ${data.last_name || ''}`.trim() ||
+              data.email,
+            profilePicture: data.profile_picture || null,
+          },
+          [data.id]: {
+            name:
+              `${data.first_name || ''} ${data.last_name || ''}`.trim() ||
+              data.email,
+            profilePicture: data.profile_picture || null,
+          },
+        },
+        unreadCounts: {
+          [data.id]: fireStore.FieldValue.increment(1),
+          [myChatId]: 0,
+        },
       },
       {merge: true},
     );
 
-    await batch.commit();
+    try {
+      await batch.commit();
+      setShowEmojiPicker(false);
+
+      // Optional: Mark this message as read immediately for the sender
+      const lastReadData = await AsyncStorage.getItem('lastReadMessages');
+      const lastReadMessages = lastReadData ? JSON.parse(lastReadData) : {};
+      const updatedLastRead = {
+        ...lastReadMessages,
+        [chatId]: messageRef.id,
+      };
+      await AsyncStorage.setItem(
+        'lastReadMessages',
+        JSON.stringify(updatedLastRead),
+      );
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const handleDeleteMessage = (messageId: string) => {
@@ -556,8 +743,7 @@ const ChatScreen = () => {
     ({item}: {item: Message}) => {
       const isSent = item.sendBy === myChatId;
       const MessageWrapper = isSent ? TouchableOpacity : View;
-            const isDownloading = downloadingDocuments[item.id] || false;
-
+      const isDownloading = downloadingDocuments[item.id] || false;
 
       // Attachment Message
       if (item.attachment) {
@@ -585,7 +771,7 @@ const ChatScreen = () => {
         };
 
         return (
-        <TouchableOpacity
+          <TouchableOpacity
             onLongPress={() => isSent && handleDeleteMessage(item.id)}
             delayLongPress={300}>
             <View
@@ -616,14 +802,20 @@ const ChatScreen = () => {
                     {item.attachment.size}
                   </Text>
                 </View>
-                
+
                 {/* Enhanced Download Button */}
                 <TouchableOpacity
-                  style={[styles.downloadButton, isDownloading && styles.downloadingButton]}
+                  style={[
+                    styles.downloadButton,
+                    isDownloading && styles.downloadingButton,
+                  ]}
                   onPress={() => downloadDocument(item.attachment, item.id)}
                   disabled={isDownloading}>
                   {isDownloading ? (
-                    <ActivityIndicator size="small" color={isSent ? '#fff' : '#666'} />
+                    <ActivityIndicator
+                      size="small"
+                      color={isSent ? '#fff' : '#666'}
+                    />
                   ) : (
                     <Icon
                       name="download"
@@ -633,7 +825,7 @@ const ChatScreen = () => {
                   )}
                 </TouchableOpacity>
               </View>
-              
+
               <Text style={[styles.time, isSent && {color: '#ddd'}]}>
                 {isDownloading && (
                   <Text style={styles.downloadingText}>Downloading... </Text>
@@ -723,14 +915,14 @@ const ChatScreen = () => {
             <View style={styles.header}>
               <Image
                 source={{
-                  uri: 'https://randomuser.me/api/portraits/women/1.jpg',
+                  uri: data?.profile_picture,
                 }}
                 style={styles.avatar}
               />
 
               <View>
                 <Text style={styles.name}>
-                  {data.first_name && data.last_name
+                  {data?.first_name || data?.last_name
                     ? `${data.first_name} ${data.last_name}`
                     : data.name}
                 </Text>
@@ -745,6 +937,8 @@ const ChatScreen = () => {
                 keyExtractor={item => item.id}
                 renderItem={renderMessage}
                 showsVerticalScrollIndicator
+                // automaticallyAdjustKeyboardInsets={true} // add this
+                // keyboardDismissMode="on-drag"
                 contentContainerStyle={{
                   paddingVertical: 10,
                   paddingHorizontal: 15,
@@ -755,7 +949,11 @@ const ChatScreen = () => {
             </View>
 
             {/* Input Container */}
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputContainer,
+                {paddingBottom: insets.bottom},
+              ]}>
               <TouchableOpacity
                 onPress={() => {
                   setShowEmojiPicker(prev => !prev);
@@ -790,7 +988,7 @@ const ChatScreen = () => {
               </TouchableOpacity>
             </View>
 
-         {showEmojiPicker && (
+            {showEmojiPicker && (
               <View style={styles.emojiContainer}>
                 <View style={styles.emojiHeader}>
                   <Text style={styles.emojiTitle}>Choose Emoji</Text>
@@ -809,7 +1007,7 @@ const ChatScreen = () => {
                       style={styles.emojiItem}
                       onPress={() => {
                         setInputText(prev => prev + item);
-                        setShowEmojiPicker(false);
+                        // setShowEmojiPicker(false);
                       }}>
                       <Text style={styles.emojiText}>{item}</Text>
                     </TouchableOpacity>
@@ -817,7 +1015,7 @@ const ChatScreen = () => {
                   showsVerticalScrollIndicator={false}
                 />
               </View>
-            )} 
+            )}
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -852,7 +1050,7 @@ const ChatScreen = () => {
               {/* Loader overlay on top of the image */}
               {loading && (
                 <View style={styles.loadingOverlay}>
-                  <ActivityIndicator size="large" color="#fff" />
+                  <ActivityIndicator size="large" color="'#6264A7" />
                 </View>
               )}
             </View>
@@ -941,6 +1139,12 @@ const ChatScreen = () => {
                 </Text>
               </View>
             </View>
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#128C7E" />
+                <Text style={styles.loadingText}>Sending...</Text>
+              </View>
+            )}
 
             {/* Send Button */}
             <TouchableOpacity
@@ -1030,8 +1234,8 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 10,
-    paddingBottom: 30,
+    // padding: 10,
+    paddingBottom: 7,
     backgroundColor: '#fff',
     alignItems: 'center',
   },
@@ -1071,13 +1275,13 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   downloadingText: {
-  fontSize: 14,             // slightly smaller for status text
-  color: '#6264A7',         // matching your primary color palette
-  fontWeight: '500',        // medium weight
-  textAlign: 'center',      // center-align for clarity
-  marginTop: 8,             // spacing above
-  marginBottom: 8,          // spacing below
-},
+    fontSize: 14, // slightly smaller for status text
+    color: '#6264A7', // matching your primary color palette
+    fontWeight: '500', // medium weight
+    textAlign: 'center', // center-align for clarity
+    marginTop: 8, // spacing above
+    marginBottom: 8, // spacing below
+  },
   fileIconContainer: {
     width: 40,
     height: 40,
@@ -1285,5 +1489,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
+  },
+  loadingText: {
+    color: '#6264A7',
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: '500',
   },
 });

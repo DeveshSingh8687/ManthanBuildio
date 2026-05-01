@@ -26,6 +26,7 @@ import {RootStackParamList} from '../navigation/Navigation';
 import CustomJobSelector from './components/MultiSelectDropDown';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
+import CustomModal from './components/CustomModal';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {PermissionsAndroid} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,14 +40,25 @@ const AddJobScreen = ({
   route: RouteProp<RootStackParamList, keyof RootStackParamList>;
 }) => {
   const userData = (route.params as any)?.userData;
-  console.log(userData, 'userdata'); // If you need userData, use: const userData = (route.params as any)?.userData;
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalContent, setModalContent] = useState({title: '', message: ''});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedJobs, setSelectedJobs] = useState<any[]>([]);
+
+  // Wrapper to ensure selectedJobs is always an array
+  const handleJobSelection = (jobs: any) => {
+    if (Array.isArray(jobs)) {
+      setSelectedJobs(jobs);
+    } else if (jobs) {
+      setSelectedJobs([jobs]); // Convert single value to array
+    } else {
+      setSelectedJobs([]);
+    }
+  };
 
   const handleCamera = async () => {
     try {
@@ -64,7 +76,8 @@ const AddJobScreen = ({
     } catch (err: any) {
       if (err?.message !== 'User cancelled image selection') {
         console.error('Camera error:', err);
-        Alert.alert('Failed to take photo.');
+        setModalContent({title: 'Error', message: 'Failed to take photo.'});
+        setModalVisible(true);
       }
     }
   };
@@ -90,7 +103,8 @@ const AddJobScreen = ({
         (err as any).message !== 'User cancelled image selection'
       ) {
         console.error('Image picker error:', err);
-        Alert.alert('Failed to pick image.');
+        setModalContent({title: 'Error', message: 'Failed to pick image.'});
+        setModalVisible(true);
       }
     }
   };
@@ -192,9 +206,9 @@ const AddJobScreen = ({
     if (!validateForm()) return;
     const token = await AsyncStorage.getItem('authToken');
     const uri = selectedImage;
-    console.log(token, 'token');
     if (!uri) {
-      Alert.alert('Please select an image.');
+      setModalContent({title: 'Image Required', message: 'Please select an image.'});
+      setModalVisible(true);
       return;
     }
     setLoading(true);
@@ -211,8 +225,10 @@ const AddJobScreen = ({
     form.append('phone_number', formData['Phone Number'] || '');
     form.append('about', formData['about'] || '');
     form.append('experience', formData['Experience'] || '');
-    selectedJobs.forEach(jobId => {
-      form.append('user_job_types', jobId);
+    // Ensure selectedJobs is always an array before appending
+    const jobsToSend = Array.isArray(selectedJobs) ? selectedJobs : [];
+    jobsToSend.forEach(jobId => {
+      form.append('user_job_types[]', jobId); // ✅ Use user_job_types[] for array format
     });
     form.append('profile_picture', {
       uri: selectedImage,
@@ -231,20 +247,46 @@ const AddJobScreen = ({
 
       const result = await response.json();
       setLoading(false);
-      navigation.navigate('AccountScreen');
 
       if (response.ok) {
-        Alert.alert('Profile updated successfully!');
-        navigation.navigate('AccountScreen');
+        setModalContent({
+          title: 'Success',
+          message: 'Profile updated successfully!',
+        });
+        setModalVisible(true);
+        setTimeout(() => {
+          navigation.navigate('AccountScreen');
+        }, 1500);
       } else {
-        Alert.alert(`Failed to update: ${result.message || 'Unknown error'}`);
+        // Handle field-level validation errors from backend
+        if (result.errors && typeof result.errors === 'object') {
+          // Backend returned field-specific errors
+          const errorMessages = Object.entries(result.errors)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join('\n');
+          
+          setModalContent({
+            title: 'Validation Error',
+            message: errorMessages || result.message || 'Failed to update profile',
+          });
+        } else {
+          // Backend returned a general error message
+          setModalContent({
+            title: 'Update Failed',
+            message: result.message || 'Unable to update profile. Please try again.',
+          });
+        }
+        setModalVisible(true);
         console.error('Update error:', result);
       }
     } catch (error) {
+      setLoading(false);
       console.error('Upload error:', error);
-      Alert.alert('Upload failed. Try again.');
-    } finally {
-      setLoading(false); // Always stop loading
+      setModalContent({
+        title: 'Network Error',
+        message: 'Unable to connect to server. Please try again.',
+      });
+      setModalVisible(true);
     }
   };
   useFocusEffect(
@@ -267,6 +309,22 @@ const AddJobScreen = ({
       </View>
     );
   }
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   return (
     <>
       {loading && (
@@ -290,9 +348,11 @@ const AddJobScreen = ({
       </View>
 
       <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={undefined}
-        keyboardVerticalOffset={0}>
+        style={[
+          styles.container,
+          {paddingBottom: keyboardVisible ? 20 : 120}, // 👈 change padding dynamically
+        ]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled">
@@ -339,10 +399,10 @@ const AddJobScreen = ({
           })}
 
           <CustomJobSelector
-            preselectedIds={userData.user_job_types.map(
+            preselectedIds={(userData?.user_job_types || []).map(
               (j: {job_type_id: any}) => j.job_type_id,
             )}
-            onSelectionChange={setSelectedJobs}
+            onSelectionChange={handleJobSelection}
           />
           <View style={styles.inputCard}>
             <Text style={styles.label}>Add image</Text>
@@ -380,6 +440,13 @@ const AddJobScreen = ({
       </KeyboardAvoidingView>
 
       {!keyboardVisible && <BottomTabBar />}
+      <CustomModal
+        visible={modalVisible}
+        title={modalContent.title}
+        message={modalContent.message}
+        buttonText="OK"
+        onClose={() => setModalVisible(false)}
+      />
     </>
   );
 };
@@ -389,6 +456,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
+    flexGrow: 1,
     paddingBottom: 100,
     backgroundColor: '#fff',
   },

@@ -29,9 +29,9 @@ import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {handleSecurePress} from './config/auth';
-import {getMyJobs} from '../utils/fetchJobs';
-import {fetchPosts} from '../utils/fetchPosts';
-
+import {fetchJobs, getMyJobs} from '../utils/fetchJobs';
+import {fetchFeed, fetchPosts} from '../utils/fetchPosts';
+import Feed from './FeedScreen';
 
 const {height} = Dimensions.get('window');
 
@@ -73,74 +73,696 @@ const NavPopup = memo(({visible, onClose}: any) => {
   );
 });
 
+const mockJobs = {
+  data: [
+    {
+      id: 44,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 27,
+        job: 'Foundations',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 4,
+        user_id: 1,
+        label:
+          'R. Vinte e Cinco de Março - Centro Histórico de São Paulo, São Paulo - SP, Brazil',
+        lat: '32.31744754',
+        long: '75.59774115',
+        map_text: '8H8X+W4M, Sujanpur, Punjab 145023, India',
+        apartment: '25',
+        building: 'Home2',
+        notes: 'opposite to this that',
+        created_at: '2025-07-31T16:09:55.000Z',
+        updated_at: '2025-08-19T13:36:08.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '13',
+      deadline: '2025-09-18T00:00:00.000Z',
+      budget: '23.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-18T16:44:58.000Z',
+      updatedAt: '2025-08-18T16:44:58.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755535498943-438863899.jpg',
+        'https://buildio.co.nz/uploads/jobs/images-1755535498943-408066621.jpg',
+      ],
+    },
+    {
+      id: 42,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 26,
+        job: 'Pergolas',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 4,
+        user_id: 1,
+        label:
+          'R. Vinte e Cinco de Março - Centro Histórico de São Paulo, São Paulo - SP, Brazil',
+        lat: '32.31744754',
+        long: '75.59774115',
+        map_text: '8H8X+W4M, Sujanpur, Punjab 145023, India',
+        apartment: '25',
+        building: 'Home2',
+        notes: 'opposite to this that',
+        created_at: '2025-07-31T16:09:55.000Z',
+        updated_at: '2025-08-19T13:36:08.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '1469',
+      deadline: '2025-08-17T00:00:00.000Z',
+      budget: '145.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-17T15:48:26.000Z',
+      updatedAt: '2025-08-17T15:48:26.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755445706932-904985431.jpg',
+      ],
+    },
+    {
+      id: 37,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 28,
+        job: 'General Plumbing',
+        parent_id: 2,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 4,
+        user_id: 1,
+        label:
+          'R. Vinte e Cinco de Março - Centro Histórico de São Paulo, São Paulo - SP, Brazil',
+        lat: '32.31744754',
+        long: '75.59774115',
+        map_text: '8H8X+W4M, Sujanpur, Punjab 145023, India',
+        apartment: '25',
+        building: 'Home2',
+        notes: 'opposite to this that',
+        created_at: '2025-07-31T16:09:55.000Z',
+        updated_at: '2025-08-19T13:36:08.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '146',
+      deadline: null,
+      budget: '1468.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-15T06:38:41.000Z',
+      updatedAt: '2025-08-15T06:38:41.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755239921255-575007077.jpg',
+      ],
+    },
+    {
+      id: 36,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 23,
+        job: 'Extensions',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 3,
+        user_id: 1,
+        label: '14 Freshland Drive, Flat Bush, Auckland 2019, New Zealand',
+        lat: '32.31693305',
+        long: '75.54490255',
+        map_text: '8G8V+HRR, Punjab 145023, India',
+        apartment: '14',
+        building: 'Home',
+        notes: '',
+        created_at: '2025-07-28T14:21:08.000Z',
+        updated_at: '2025-08-18T17:39:17.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '127',
+      deadline: null,
+      budget: '134.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-15T06:34:44.000Z',
+      updatedAt: '2025-08-15T06:34:44.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755239684730-908823325.jpg',
+      ],
+    },
+    {
+      id: 35,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 25,
+        job: 'Decking',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 3,
+        user_id: 1,
+        label: '14 Freshland Drive, Flat Bush, Auckland 2019, New Zealand',
+        lat: '32.31693305',
+        long: '75.54490255',
+        map_text: '8G8V+HRR, Punjab 145023, India',
+        apartment: '14',
+        building: 'Home',
+        notes: '',
+        created_at: '2025-07-28T14:21:08.000Z',
+        updated_at: '2025-08-18T17:39:17.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '134',
+      deadline: null,
+      budget: '56.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-15T06:19:22.000Z',
+      updatedAt: '2025-08-15T06:19:22.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755238762243-792120350.jpg',
+        'https://buildio.co.nz/uploads/jobs/images-1755238762244-856081285.jpg',
+        'https://buildio.co.nz/uploads/jobs/images-1755238762245-981267800.jpg',
+      ],
+    },
+    {
+      id: 33,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 27,
+        job: 'Foundations',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 3,
+        user_id: 1,
+        label: '14 Freshland Drive, Flat Bush, Auckland 2019, New Zealand',
+        lat: '32.31693305',
+        long: '75.54490255',
+        map_text: '8G8V+HRR, Punjab 145023, India',
+        apartment: '14',
+        building: 'Home',
+        notes: '',
+        created_at: '2025-07-28T14:21:08.000Z',
+        updated_at: '2025-08-18T17:39:17.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '567',
+      deadline: null,
+      budget: '234.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-15T06:05:12.000Z',
+      updatedAt: '2025-08-15T06:05:12.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755237912784-948212847.jpg',
+      ],
+    },
+    {
+      id: 29,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 27,
+        job: 'Foundations',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 4,
+        user_id: 1,
+        label:
+          'R. Vinte e Cinco de Março - Centro Histórico de São Paulo, São Paulo - SP, Brazil',
+        lat: '32.31744754',
+        long: '75.59774115',
+        map_text: '8H8X+W4M, Sujanpur, Punjab 145023, India',
+        apartment: '25',
+        building: 'Home2',
+        notes: 'opposite to this that',
+        created_at: '2025-07-31T16:09:55.000Z',
+        updated_at: '2025-08-19T13:36:08.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: '690holl',
+      deadline: null,
+      budget: '7900.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-14T16:47:58.000Z',
+      updatedAt: '2025-08-14T16:47:58.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755190078143-752030630.jpg',
+      ],
+    },
+    {
+      id: 27,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 26,
+        job: 'Pergolas',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 4,
+        user_id: 1,
+        label:
+          'R. Vinte e Cinco de Março - Centro Histórico de São Paulo, São Paulo - SP, Brazil',
+        lat: '32.31744754',
+        long: '75.59774115',
+        map_text: '8H8X+W4M, Sujanpur, Punjab 145023, India',
+        apartment: '25',
+        building: 'Home2',
+        notes: 'opposite to this that',
+        created_at: '2025-07-31T16:09:55.000Z',
+        updated_at: '2025-08-19T13:36:08.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description: 'R56uy',
+      deadline: null,
+      budget: '134.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-14T15:57:02.000Z',
+      updatedAt: '2025-08-14T15:57:02.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755187022006-303764243.jpg',
+      ],
+    },
+    {
+      id: 21,
+      user_id: 15,
+      is_my_job: false,
+      job_type: {
+        id: 24,
+        job: 'Retaining Walls',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 22,
+        user_id: 15,
+        label: '14 Freshland Drive, Flat Bush, Auckland 2019, New Zealand',
+        lat: '-36.9770699',
+        long: '174.9081592',
+        map_text: null,
+        apartment: 'Home',
+        building: '',
+        notes: '',
+        created_at: '2025-08-12T05:11:25.000Z',
+        updated_at: '2025-08-12T05:11:25.000Z',
+      },
+      user: {
+        id: 15,
+        first_name: 'Rajinder',
+        last_name: 'Lastt',
+        email: 'rajinder.dulku.dev11@gmail.com',
+        phone_number: '971567105527',
+        is_enable: 1,
+        social_media_provider: 'Google',
+        provider_token: '101994429514918393289',
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754302836652-835222365.jpg',
+        about: 'Testtt',
+        experience: '5 yestttttt',
+        created_at: '2025-07-25T17:21:43.000Z',
+        updated_at: '2025-08-04T10:20:36.000Z',
+        deleted_at: null,
+      },
+      description: 'Thissssss dec',
+      deadline: null,
+      budget: '5000.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-14T05:26:17.000Z',
+      updatedAt: '2025-08-14T05:26:17.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1755149176994-353934079.jpg',
+      ],
+    },
+    {
+      id: 19,
+      user_id: 1,
+      is_my_job: false,
+      job_type: {
+        id: 27,
+        job: 'Foundations',
+        parent_id: 1,
+        created_at: '2025-07-18T12:53:20.000Z',
+        updated_at: '2025-07-18T12:53:20.000Z',
+        deleted_at: null,
+      },
+      address: {
+        id: 18,
+        user_id: 1,
+        label: '56 Dukan St, New Palasia, Indore, Madhya Pradesh 452001, India',
+        lat: '22.7241698',
+        long: '75.8845896',
+        map_text: 'data from google map',
+        apartment: '',
+        building: '',
+        notes: '',
+        created_at: '2025-08-04T19:05:59.000Z',
+        updated_at: '2025-08-12T16:49:05.000Z',
+      },
+      user: {
+        id: 1,
+        first_name: 'kaur',
+        last_name: 'rajinder',
+        email: 'rajinder@example.com',
+        phone_number: '43434434',
+        is_enable: 1,
+        social_media_provider: null,
+        provider_token: null,
+        profile_picture:
+          'https://buildio.co.nz/uploads/profile/profile_picture-1754978277737-932928676.jpg',
+        about: 'this is ab',
+        experience: '323',
+        created_at: '2025-07-02T18:18:53.000Z',
+        updated_at: '2025-08-12T05:57:57.000Z',
+        deleted_at: null,
+      },
+      description:
+        'Some claim lorem ipsum threatens to promote design over content, while others defend its value in the process of planning.',
+      deadline: '2025-11-26T00:00:00.000Z',
+      budget: '1500.00',
+      status: 'open',
+      apply_status: 'pending',
+      createdAt: '2025-08-12T05:30:19.000Z',
+      updatedAt: '2025-08-12T05:30:19.000Z',
+      images: [
+        'https://buildio.co.nz/uploads/jobs/images-1754976619359-295360485.jpeg',
+      ],
+    },
+  ],
+  meta: {
+    total: 15,
+    page: 1,
+    limit: 10,
+    totalPages: 2,
+  },
+};
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [tokenChecked, setTokenChecked] = useState(false);
-  const [jobs, setJobs] = useState<any>(false);
+  const [jobs, setJobs] = useState<any>([]);
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
+  const [postWithoutAuth, setPostsWithoutAuth] = useState([]);
+  const [jobsWithoutAuth, setJobsWithoutAUth] = useState<any[]>([]);
+  console.log(posts, "Posts in HomeScreen");
+
+  // Check if terms are accepted on screen focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkTermsAcceptance = async () => {
+        try {
+          const isTermsAccepted = await AsyncStorage.getItem('is_terms_accepted');
+          if (isTermsAccepted !== 'true') {
+            // Redirect to PrivacySecurity if terms not accepted
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'PrivacySecurity'}],
+            });
+          }
+        } catch (error) {
+          console.error('Error checking terms acceptance:', error);
+        }
+      };
+
+      checkTermsAcceptance();
+    }, [navigation]),
+  );
 
   const loadJobs = async () => {
     setLoading(true);
     try {
       const res = await getMyJobs();
-      if (res?.status) setJobs(res.data);
+      console.log("Jobs API response:", res.data);
+      if (res?.status) {setJobs(res.data);}
     } catch (err: any) {
       console.error('Failed to load jobs:', err.message);
     } finally {
       setLoading(false);
     }
   };
-useFocusEffect(
-  
-  React.useCallback(() => {
-    // This runs every time screen comes into focus
-    loadJobs();
-  }, [])
-);
-  const loadPosts = async (authToken: string) => {
+  useFocusEffect(
+    React.useCallback(() => {
+      // This runs every time screen comes into focus
+      loadJobs();
+    }, []),
+  );
+  const loadPosts = async (authToken?: string) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        'https://buildio.co.nz/api/posts/list?page=1&limit=10',
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        },
-      );
+      // ✅ Correct endpoints
+      const url = authToken
+        ? 'https://buildio.co.nz/api/posts/list?page=1&limit=10'
+        : 'https://buildio.co.nz/api/home/feed';
 
-      if (!response.ok)
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
 
+      if (authToken) {
+        headers.Authorization = `Bearer ${authToken}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || `HTTP error! Status: ${response.status}`,
+        );
+      }
+
       setPosts(data?.data || []);
     } catch (err: any) {
+      console.error('loadPosts error:', err.message);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      const storedToken = await AsyncStorage.getItem('authToken');
-      setToken(storedToken);
-      setTokenChecked(true);
-      if (storedToken) loadPosts(storedToken);
-    })();
-    loadJobs();
-  }, []);
+  
+  const loadFeedWithoutAuth = async () => {
+    const authToken = AsyncStorage.getItem('authToken');
+    try {
+      setLoading(true);
+
+        const res = await fetchFeed();
+        setPostsWithoutAuth(res || []);
+      
+      // API returns {status, message, data}
+    } catch (error) {
+      console.error('Error loading feed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const loadJobsWithoutAuth = async () => {
+    try {
+      setLoading(true);
+      const res = await fetchJobs();
+      setJobsWithoutAUth(res || []);
+    } catch (error) {
+      console.error("Error loading jobs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+useEffect(() => {
+  (async () => {
+    const storedToken = await AsyncStorage.getItem("authToken");
+    setToken(storedToken);
+    setTokenChecked(true);
+
+    if (storedToken) {
+      // Authenticated
+      loadPosts(storedToken);
+      loadJobs(); // if you have a token-aware jobs API
+    } else {
+      // Guest / Without Auth
+      loadFeedWithoutAuth();
+      loadJobsWithoutAuth();
+    }
+  })();
+}, []);
 
   useFocusEffect(useCallback(() => setModalVisible(false), []));
 
   if (!tokenChecked) return null;
+  const jobList = jobs?.data?.length
+    ? jobs.data.slice(0, 3)
+    : jobsWithoutAuth?.data?.slice(0, 3);
 
   return (
     <>
@@ -168,7 +790,14 @@ useFocusEffect(
 
           <TouchableOpacity
             style={styles.cardBtn}
-            onPress={() => navigation.navigate('PickJob', {myJob: jobs})}>
+            onPress={() => {
+              if (jobs?.data?.length) {
+                             navigation.navigate('PostCard');
+
+              } else {
+                navigation.navigate('Login');
+              }
+            }}>
             <View style={styles.cardContent}>
               <View>
                 <Text style={styles.cardTitle}>Pick a Job</Text>
@@ -184,15 +813,15 @@ useFocusEffect(
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.recentlyPosted}>
+        {/* <TouchableOpacity style={styles.recentlyPosted}>
           <View style={styles.leftSection}>
             <Icon name="edit-note" size={16} color="#fff" />
             <Text style={styles.buttonText}>News Section</Text>
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
-        <NewsFeed showBackButton={false} showHeading={false} limit={3} />
-
+        {/* <NewsFeed showBackButton={false} showHeading={false} limit={3} /> */}
+{/* 
         <TouchableOpacity
           style={styles.exploreCard}
           onPress={() => handleSecurePress('NewsScreen', navigation)}>
@@ -203,26 +832,27 @@ useFocusEffect(
             text="Know More"
             onPress={() => handleSecurePress('NewsScreen', navigation)}
           />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity
           style={styles.recentlyPosted}
-          onPress={() => handleSecurePress('PickJob', navigation)}>
+          // onPress={() => handleSecurePress('PickJob', navigation)}
+          >
           <View style={styles.leftSection}>
             <Icon name="edit-note" size={16} color="#fff" style={styles.icon} />
             <Text style={styles.buttonText}>Recently posted</Text>
-            <Icon
+            {/* <Icon
               name="arrow-right"
               size={16}
               color="#fff"
               style={styles.rightIcon}
-            />
-            <Text style={styles.moreText}>More</Text>
+            /> */}
+            {/* <Text style={styles.moreText}>More</Text> */}
           </View>
         </TouchableOpacity>
 
         <View style={styles.recentJobs}>
-          {jobs?.data?.slice(0, 3).map((job: any, index: number) => (
+          {jobList?.slice(0, 3).map((job: any, index: number) => (
             <View style={styles.jobItem} key={index}>
               <View>
                 <Text style={styles.jobTitle}>
@@ -256,17 +886,22 @@ useFocusEffect(
 
         <TouchableOpacity
           style={styles.seeAll}
-          onPress={() => navigation.navigate('PickJob', {myJob: jobs})}>
+          onPress={() => {
+            if (jobs?.data?.length) {
+              navigation.navigate('PostCard');
+            } else {
+              navigation.navigate('Login');
+            }
+          }}>
           <Text style={{color: '#fff'}}>See All</Text>
         </TouchableOpacity>
-
-        <PostFeed
-          showBackButton={false}
-          showBottomBar={false}
-          showHeader={false}
-          showLikeAndShare={false}
-          myJobs={posts}
-        />
+       <Feed
+  myJobs={
+    posts?.data?.length
+      ? { ...posts, data: posts?.data.slice(0, 3) }
+      : postWithoutAuth
+  }
+/>
 
         <TouchableOpacity
           style={styles.exploreCard}
@@ -295,9 +930,13 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#eee',
     borderRadius: 10,
-    marginTop: -15,
+    marginTop: -8,
   },
-  cardRow: {flexDirection: 'column', alignItems: 'stretch',backgroundColor:'#fff'},
+  cardRow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    backgroundColor: '#fff',
+  },
   cardBtn: {
     backgroundColor: '#6264A7',
     borderRadius: 12,
@@ -325,7 +964,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    padding:20
+    padding: 20,
   },
   exploreCard: {
     backgroundColor: '#f4f6ff',
@@ -347,7 +986,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal:10
+    paddingHorizontal: 10,
   },
   jobTitle: {fontWeight: 'bold', fontSize: 14},
   jobSubText: {fontSize: 12, color: '#555'},

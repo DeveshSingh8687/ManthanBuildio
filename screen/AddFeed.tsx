@@ -10,6 +10,7 @@ import {
   Keyboard,
   PermissionsAndroid,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {Icon} from 'react-native-elements';
 import TopBar from './components/TopBar';
@@ -20,15 +21,14 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Heading from './components/CommonHeader';
 import CustomModal from './components/CustomModal';
-
+type RouteParams = {
+  updateFeed?: boolean;
+  item?: any;
+};
 const AddPostScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const {updateFeed, item } = route.params as {
-    updateFeed?: boolean;
-    item?: any;
-  }; 
-
+  const {updateFeed, item} = (route?.params as RouteParams) ?? {};
 
   const [postTitle, setPostTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -40,6 +40,8 @@ const AddPostScreen = () => {
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState('');
+  const [profilePic, setProfilePic] = useState('');
+  const [primaryAddress, setPrimaryAddress] = useState('');
   useEffect(() => {
     if (updateFeed && item) {
       // Pre-fill form fields
@@ -48,7 +50,7 @@ const AddPostScreen = () => {
 
       // Pre-fill images (if API returns URLs)
       if (item?.images && Array.isArray(item.images)) {
-        setImageUris(item.images.map((img: {url: any}) => img.url)); // adjust if key name is different
+        setImageUris(item.images.map((img: {url: any}) => img)); // adjust if key name is different
       }
     }
   }, [updateFeed, item]);
@@ -80,8 +82,11 @@ const AddPostScreen = () => {
     setLoading(true);
 
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const formData = new FormData();
+ const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        Alert.alert('Error', 'You must be logged in to like posts.');
+        return;
+      }      const formData = new FormData();
       formData.append('title', postTitle);
       formData.append('description', description);
 
@@ -126,7 +131,8 @@ const AddPostScreen = () => {
         'OK',
         () => {
           setModalVisible(false);
-          navigation.goBack();
+          
+          navigation.navigate('MyProfile');
         },
       );
     } catch (error: any) {
@@ -142,8 +148,22 @@ const AddPostScreen = () => {
       try {
         const first = await AsyncStorage.getItem('firstName');
         const last = await AsyncStorage.getItem('lastName');
-        const user= await AsyncStorage.getItem('user')
-        console.log(user)
+        const userString = await AsyncStorage.getItem('user');
+
+        let profilePicture = null;
+        let address = null;
+
+        if (userString) {
+          const user = JSON.parse(userString); // Parse the string into an object
+          profilePicture = user.profile_picture;
+          console.log(user, 'user');
+        }
+        if (userString) {
+          const user = JSON.parse(userString);
+          address = user?.addresses?.[0]?.map_text;
+          setPrimaryAddress(address);
+        }
+        setProfilePic(profilePicture);
         setFullName(`${first || ''} ${last || ''}`);
       } catch (e) {
         console.error('Error loading name:', e);
@@ -255,7 +275,6 @@ const AddPostScreen = () => {
   //     setLoading(false);
   //   }
   // };
-
   return (
     <>
       <TopBar />
@@ -273,12 +292,12 @@ const AddPostScreen = () => {
             {/* Profile Info */}
             <View style={styles.profileContainer}>
               <Image
-                source={{uri: 'https://i.pravatar.cc/100'}}
+                source={{uri: profilePic || 'https://i.pravatar.cc/100'}}
                 style={styles.profileImage}
               />
               <View style={styles.textContainer}>
-                <Text style={styles.username}>{fullName}</Text>
-                <Text style={styles.location}>Auckland, New Zealand</Text>
+                {/* <Text style={styles.username}>{fullName}</Text>
+                <Text style={styles.location}>{primaryAddress}</Text> */}
               </View>
             </View>
 

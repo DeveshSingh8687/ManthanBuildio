@@ -1,34 +1,35 @@
-import React, { useCallback } from 'react';
+import React, {useCallback} from 'react';
 import {Image, StyleSheet, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {NavPopup} from './Modal';
-import { useFocusEffect } from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
 
 const TopBar = () => {
   const [modalVisible, setModalVisible] = React.useState(false);
-useFocusEffect(
+  useFocusEffect(
     useCallback(() => {
-  
-        setModalVisible(false);
-      
+      setModalVisible(false);
+
       // On focus, close the modal
-    }, [])
+    }, []),
   );
   return (
     // <SafeAreaView >
-      <>
+    <>
       <View style={styles.headerLogo}>
         <Image
           source={require('../../assets/asset_logo.png')}
-          style={styles.logo} />
+          style={styles.logo}
+        />
         <TouchableOpacity
           style={styles.profileButton}
           onPress={() => setModalVisible(true)}>
           <Icon name="person-outline" size={24} />
         </TouchableOpacity>
-      </View><NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} /></>
-        
+      </View>
+      <NavPopup visible={modalVisible} onClose={() => setModalVisible(false)} />
+    </>
   );
 };
 const styles = StyleSheet.create({
@@ -49,7 +50,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 100,
-    height: 100,
+    height: 80,
     resizeMode: 'contain',
   },
   profileButton: {

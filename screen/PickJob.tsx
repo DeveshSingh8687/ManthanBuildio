@@ -7,10 +7,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  ScrollView,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import {Share} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {
   NavigationProp,
@@ -18,110 +18,378 @@ import {
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {RootStackParamList} from '../navigation/Navigation';
 import BottomTabBar from './components/BottomNavigaionBar';
 import TopBar from './components/TopBar';
 import Heading from './components/CommonHeader';
 import ImageSlider from './components/ImageSlider';
-import {getMyJobs, handleApply} from '../utils/fetchJobs';
+import {fetchJobs, getMyJobs, handleApply} from '../utils/fetchJobs';
 import CustomModal from './components/CustomModal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {getAccordionColors} from 'react-native-paper/lib/typescript/components/List/utils';
+import {capitalizeFirstLetter} from '../utils/helper';
+
 const screenWidth = Dimensions.get('window').width;
 
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+interface PostFeedProps {
+  heading?: string;
+  showBackButton?: boolean;
+  onBackPress?: () => void;
+  showBottomBar?: boolean;
+  showButtonText?: string;
+  showHeader?: boolean;
+  showLikeAndShare?: boolean;
+  myJobs: any[];
+}
 
-//   {
-//     id: '1',
-//     user: 'Gabie Sheber',
-//     date: 'Jan. 02, 2024',
-//     image:
-//       'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=800&q=60',
-//     content:
-//       'Just finished this challenging but rewarding renovation project. Loved the transformation!',
-//   },
-//   {
-//     id: '2',
-//     user: 'John Smith',
-//     date: 'Jan. 02, 2024',
-//     image: 'https://randomuser.me/api/portraits/men/1.jpg',
-//     content:
-//       'Another day, another project! Working on a custom staircase today. #woodworking #craftsmanship',
-//   },
-//   {
-//     id: '3',
-//     user: 'Gabie Sheber',
-//     date: 'Jan. 02, 2024',
-//     image:
-//       'https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?auto=format&fit=crop&w=800&q=60',
-//     content:
-//       'Hiring experienced carpenters and roofers for our upcoming project. Apply today!',
-//   },
-// ];
+interface PostCardProps {
+  item: any;
+  showLikeAndShare: boolean;
+  showButtonText?: string;
+  showLikeAndShareButton?: boolean;
+  refreshJobs: () => Promise<void>;
+  onRemoveJob: (id: number) => void;
+  navigation: NavigationProp<RootStackParamList>;
+}
 
+const noUserHeaderStyle = {paddingTop: 0};
+const cancelledButtonStyle = {backgroundColor: '#ccc'};
+
+// ─────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────
+export default function PostFeed({
+  heading = 'Job Posts',
+  showBackButton = true,
+  showBottomBar = true,
+  showButtonText,
+  showHeader = true,
+  showLikeAndShare = true,
+  myJobs = [],
+}: PostFeedProps) {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const route =
+    useRoute<RouteProp<RootStackParamList, keyof RootStackParamList>>();
+  console.log(myJobs, 'my jobs in pick job screen');
+  const {showLikeAndShareButton, myJob: myJobFromRoute} = (route.params ||
+    {}) as {
+    showLikeAndShareButton?: boolean;
+    myJob?: any[];
+  };
+
+  const jobData = myJobs?.data?.length ? myJobs : myJobFromRoute || [];
+  console.log(jobData, 'job data in pick job screen');
+
+  const [jobs, setJobs] = useState(jobData);
+  const [loading, setLoading] = useState(true);
+  const [timeoutReached, setTimeoutReached] = useState(false);
+
+  // ── Loading logic ──
+  useEffect(() => {
+    if (Array.isArray(jobData?.data) || Array.isArray(jobData)) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const timer = setTimeout(() => {
+      setTimeoutReached(true);
+      setLoading(false);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [jobData]);
+
+  // ── Refresh jobs from API ──
+  const refreshJobs = async () => {
+    try {
+      // Check if user has auth token
+      const token = await AsyncStorage.getItem('authToken');
+      // Use fetchJobs (public) if no token, otherwise use getMyJobs
+      const updatedJobs = token ? await getMyJobs() : await fetchJobs();
+      setJobs(updatedJobs);
+    } catch (err) {
+      console.error('Refresh jobs failed:', err);
+    }
+  };
+
+  // ── Remove a single job card from state ──
+  const removeJob = (jobId: number) => {
+    setJobs((prev: any) => {
+      if (
+        prev &&
+        typeof prev === 'object' &&
+        !Array.isArray(prev) &&
+        Array.isArray(prev.data)
+      ) {
+        return {...prev, data: prev.data.filter((j: any) => j.id !== jobId)};
+      }
+      if (Array.isArray(prev)) {
+        return prev.filter((j: any) => j.id !== jobId);
+      }
+      return prev;
+    });
+  };
+
+  // ── Guard: Loading ──
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#6264A7" />
+        <Text style={{marginTop: 10}}>Loading jobs...</Text>
+      </View>
+    );
+  }
+
+  // ── Guard: Timeout with no data ──
+  if (timeoutReached && (!jobData?.data || jobData.data.length === 0)) {
+    return (
+      <View style={styles.centered}>
+        <Text>No posts available</Text>
+      </View>
+    );
+  }
+
+  // ── Guard: Empty data ──
+  const hasNoData =
+    !loading &&
+    (jobData?.data?.length === 0 ||
+      (Array.isArray(jobData) && jobData.length === 0));
+
+  if (hasNoData) {
+    return (
+      <View style={styles.centered}>
+        <Text>No posts available</Text>
+      </View>
+    );
+  }
+console.log(jobs?.data ?? (Array.isArray(jobs) ? jobs : []), 'jobs data in pick job screen');
+
+  return (
+    <View style={{flex: 1, backgroundColor: '#fff'}}>
+      {(showHeader || showLikeAndShareButton) && <TopBar />}
+
+      {showBackButton && (
+        <View style={styles.headerContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          />
+          <Heading>{heading}</Heading>
+        </View>
+      )}
+      <FlatList
+        data={jobs?.data ?? (Array.isArray(jobs) ? jobs : [])}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.list}
+        renderItem={({item}) => (
+          <PostCard
+            item={item}
+            showLikeAndShare={showLikeAndShare}
+            showButtonText={showButtonText}
+            showLikeAndShareButton={showLikeAndShareButton}
+            refreshJobs={refreshJobs}
+            onRemoveJob={removeJob}
+            navigation={navigation}
+          />
+        )}
+      />
+
+      {(showBottomBar || showLikeAndShareButton) && (
+        <>
+          <View style={{height: 100, backgroundColor: '#fff'}} />
+          <BottomTabBar />
+        </>
+      )}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────
+// PostCard Component
+// ─────────────────────────────────────────────
 const PostCard = ({
   item,
   showLikeAndShare,
   showButtonText,
   showLikeAndShareButton,
-  refreshJobs
-}: any) => {
-  const [likes, setLikes] = useState(0);
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  onRemoveJob,
+  navigation,
+}: PostCardProps) => {
+  const [_likes, _setLikes] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [modalTitle, setModalTitle] = useState('');
-    const [expanded, setExpanded] = useState(false);
-  
-    const descriptionWords = item.description
-      ? item.description.split(/\s+/)
-      : [];
-    const isLong = descriptionWords.length > 20;
-    const displayText = expanded
-      ? item.description
-      : descriptionWords.slice(0, 20).join(' ') + (isLong ? '...' : '');
+  const [expanded, setExpanded] = useState(false);
+  const [_isCreatingLink, setIsCreatingLink] = useState(false);
+  const [applyLoading, setApplyLoading] = useState(false);
 
-  const handleLike = () => setLikes(prev => prev + 1);
-  // console.log(item.status, 'item in job post');
-  const getUserId = async () => {
+  // ── Description truncation ──
+  const descriptionWords = item.description
+    ? item.description.split(/\s+/)
+    : [];
+  const isLong = descriptionWords.length > 20;
+  const displayText = expanded
+    ? item.description
+    : descriptionWords.slice(0, 20).join(' ') + (isLong ? '...' : '');
+
+  // ── Like ──
+  const handleLike = async () => {
     try {
-      const userId = await AsyncStorage.getItem('user');
-      if (userId !== null) {
-        console.log('User ID:', userId);
-      } else {
-        console.log('No user ID found');
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        Alert.alert('Error', 'You must be logged in to like posts.');        
+        return;
       }
+      const response = await fetch(
+        `https://buildio.co.nz/api/posts/like/${item.id}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'content-type': 'multipart/form-data',
+          },
+        },
+      );
+      if (!response.ok) {
+        throw new Error('Failed to toggle like');
+      }
+      const data = await response.json();
+      if (data?.status && data?.message) {
+        if (data.message === 'Post Liked') {
+          item.likes_count += 1;
+          item.is_liked = true;
+        } else if (data.message === 'Post Unliked') {
+          item.likes_count = Math.max(0, item.likes_count - 1);
+          item.is_liked = false;
+        }
+      }
+      _setLikes(prev => prev + 1); // force re-render
     } catch (error) {
-      console.error('Error reading user ID:', error);
+      console.error('Error toggling like:', error);
+      Alert.alert('Error', 'Unable to update like. Please try again.');
     }
   };
 
-
-  const handleClick = async () => {
-    if (showButtonText === 'Applications') {
-      navigation.navigate('JobListComponent', {jobId: item?.id});
+  // ── Share ──
+  const handleShare = async () => {
+    if (_isCreatingLink) {
       return;
     }
-
     try {
-      const result = await handleApply(item?.id);
-      console.log(result,'result')
-
-      if (result?.status === true) {
-        setModalTitle('Success');
-        setModalMessage('You have successfully applied to this job.');
-        await refreshJobs?.(); // ✅ get latest data from parent
-      } else {
-        setModalTitle('Info');
-        setModalMessage('You have already applied to this job.');
-      }
-    } catch {
-      setModalTitle('Error');
-      setModalMessage('Something went wrong. Please try again.');
+      const shareableLink = 'buildio://Home';
+      await Share.share({
+        message: `📱 Open in app: ${shareableLink}`,
+        url: shareableLink,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+      Alert.alert('Error', 'Unable to share this job. Please try again.');
     }
-
-    setModalVisible(true);
   };
 
+  // ── Cancel job ──
+  const handleCancelJob = async () => {
+    try {
+      setApplyLoading(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        setModalTitle('Error');
+        setModalMessage('Authorization token not found. Please sign in again.');
+        setModalVisible(true);
+        return;
+      }
+
+      const response = await fetch(
+        `https://buildio.co.nz/api/jobs/cancel/${item?.id}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'content-type': 'multipart/form-data',
+          },
+        },
+      );
+
+      if (response.ok) {
+        console.log('Job cancelled successfully');
+
+        setModalTitle('Success');
+        setModalMessage('Job cancelled successfully.');
+        setModalVisible(true);
+
+        // Delay removal so modal is visible
+        if (item.apply_status !== 'approved') {
+          setTimeout(() => {
+            onRemoveJob(item.id);
+          }, 1500); // 1.5 seconds delay
+        }
+
+        // For approved, just reset status
+        item.apply_status = null;
+      } else {
+        setModalTitle('Error');
+        setModalMessage('Failed to cancel the job. Please try again.');
+        setModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error cancelling job:', error);
+      setModalTitle('Error');
+      setModalMessage('Something went wrong. Please try again.');
+      setModalVisible(true);
+    } finally {
+      setApplyLoading(false);
+    }
+  };
+
+  // ── Apply / main CTA ──
+  const handleClick = async () => {
+    if (showButtonText === 'Applications') {
+      navigation.navigate('JobListComponent' as any, {jobId: item?.id,  fromPage: 'PickJob'} as any);
+      return;
+    }
+    console.log(
+      item.apply_status,
+      'apply status',
+      (item.staus === 'open' || item.apply_status === 'pending') &&
+        item.apply_status !== 'approved',
+    );
+    if (
+      (item.staus === 'open' || item.apply_status === 'pending') &&
+      item.apply_status !== 'approved'
+    ) {
+      handleCancelJob();
+      return;
+    }
+    // try {
+    //   setApplyLoading(true);
+    //   const result = await handleApply(item?.id);
+    //   if (result?.status === true) {
+    //     setModalTitle('Success');
+    //     setModalMessage('You have successfully applied to this job.');
+    //     item.apply_status = 'applied';
+    //     await refreshJobs();
+    //   } else {
+    //     setModalTitle('Info');
+    //     setModalMessage('You have already applied to this job.');
+    //   }
+    // } catch {
+    //   setModalTitle('Error');
+    //   setModalMessage('Something went wrong. Please try again.');
+    // } finally {
+    //   setApplyLoading(false);
+    //   setModalVisible(true);
+    // }
+  };
+
+  // ── Button label logic ──
+  const buttonLabel =
+    showButtonText === 'Status' && item.status === 'open'
+      ? 'Cancel'
+      : showButtonText !== 'Applications' && item.apply_status === 'approved'
+      ? item.status
+      : showButtonText || 'Apply';
+  console.log(item,'item in post card');
   return (
     <>
       <CustomModal
@@ -131,85 +399,107 @@ const PostCard = ({
         buttonText="Close"
         onClose={() => setModalVisible(false)}
       />
+
       <View
         style={[
           styles.card,
-          !(item.user?.first_name && item.user?.last_name) && {paddingTop: 0},
+          !(item.user?.first_name && item.user?.last_name) && noUserHeaderStyle,
         ]}>
+        {/* Header */}
         <View style={styles.header}>
           <Image
-            source={{uri: item.user?.profile_picture}} // fallback avatar
+            source={{uri: item.user?.profile_picture}}
             style={styles.avatar}
           />
           <View>
             <Text style={styles.name}>
-              {item.user?.first_name && item.user?.last_name
-                ? `${item.user.first_name} ${item.user.last_name}`
-                : ''}
+              {[
+                item.user?.first_name &&
+                  capitalizeFirstLetter(item.user.first_name),
+                item.user?.last_name &&
+                  capitalizeFirstLetter(item.user.last_name),
+              ]
+                .filter(Boolean)
+                .join(' ')}
             </Text>
-            <Text style={styles.date}>
-              {item.user?.first_name && item.user?.last_name && (
-                <Text>{new Date(item.createdAt).toDateString()}</Text>
-              )}
-            </Text>
+            {item.user?.first_name && item.user?.last_name && (
+              <Text style={styles.date}>
+                {new Date(item.createdAt).toDateString()}
+              </Text>
+            )}
           </View>
         </View>
 
-       
-        <ImageSlider images={item.images} />
+        {/* Images */}
+        {item.images && <ImageSlider images={item.images} />}
 
-        {/* Job Description */}
-          <Text style={styles.content}>{displayText}</Text>
-             {isLong && (
-               <Text
-                 style={{color: '#6264A7', marginTop: 4}}
-                 onPress={() => setExpanded(!expanded)}>
-                 {expanded ? 'Show less' : 'Show more'}
-               </Text>
-             )}
+        {/* Description */}
+        <Text style={styles.content}>{displayText}</Text>
+        {isLong && (
+          <Text
+            style={styles.expandToggle}
+            onPress={() => setExpanded(!expanded)}>
+            {expanded ? 'Show less' : 'Show more'}
+          </Text>
+        )}
 
+        {/* Like / Share */}
         {!showLikeAndShare && (
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
               <Icon name="thumb-up" size={20} color="#6264A7" />
-              <Text style={styles.buttonLabel}>{likes}</Text>
+              <Text style={styles.buttonLabel}>{item.likes_count}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton}>
-              <Icon name="share" size={20} color="#6264A7" />
-              <Text style={styles.buttonLabel}>Share</Text>
+            <TouchableOpacity
+              style={[
+                styles.shareButton,
+                _isCreatingLink && styles.disabledButton,
+              ]}
+              onPress={handleShare}
+              disabled={_isCreatingLink}>
+              {_isCreatingLink ? (
+                <ActivityIndicator size="small" color="#6264A7" />
+              ) : (
+                <Icon name="share" size={20} color="#6264A7" />
+              )}
+              <Text style={styles.buttonLabel}>
+                {_isCreatingLink ? 'Creating...' : 'Share'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
+        {/* View More / Apply */}
         {(showLikeAndShare || showLikeAndShareButton) && (
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={styles.viewMoreButton}
               onPress={() =>
-                navigation.navigate('JobDetailsScreen', {
-                  job: item,
-                  updateJob: item.is_my_job ? true : false,
-                })
+                navigation.navigate(
+                  'JobDetailsScreen' as any,
+                  {
+                    job: item,
+                    updateJob: !!item.is_my_job,
+                  } as any,
+                )
               }>
               <Text style={styles.viewMoreButtonText}>View More</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.applyButton,
-                showButtonText !== 'Applications' &&
-                  item.apply_status && {
-                    backgroundColor: '#ccc',
-                  },
+                showButtonText !== 'Applications' && item.apply_status
+                  ? cancelledButtonStyle
+                  : null,
               ]}
-              disabled={item.apply_status === 'pending'}
-              onPress={handleClick}>
-              <Text style={styles.applyButtonText}>
-                {showButtonText === 'Status'
-                  ? item.status
-                  : showButtonText !== 'Applications' && item.apply_status
-                  ? 'Applied'
-                  : showButtonText || 'Apply'}
-              </Text>
+              onPress={handleClick}
+              disabled={applyLoading}>
+              {applyLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.applyButtonText}>{buttonLabel}</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -218,156 +508,29 @@ const PostCard = ({
   );
 };
 
-export default function PostFeed({
-  heading = 'Job Posts',
-  showBackButton = true,
-  onBackPress = () => {},
-  showBottomBar = true,
-  showButtonText,
-  showHeader = true,
-  showLikeAndShare = true,
-  myJobs = [],
-}: {
-  heading?: string;
-  showBackButton?: boolean;
-  onBackPress?: () => void;
-  showBottomBar?: boolean;
-  showButtonText?: string;
-  showHeader?: boolean;
-  showLikeAndShare?: boolean;
-  myJobs: any[];
-}) {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const route =
-    useRoute<RouteProp<RootStackParamList, keyof RootStackParamList>>();
-
-  const {
-    showLikeAndShareButton,
-    showHeading,
-    myJob: myJobFromRoute,
-  } = (route.params || {}) as {
-    showLikeAndShareButton?: boolean;
-    showHeading?: string;
-    myJob?: any[];
-  };
-
-  const jobData = myJobs?.data?.length ? myJobs : myJobFromRoute || [];
-  const [jobs, setJobs] = useState(jobData);
-  const [loading, setLoading] = useState(true);
-  const [timeoutReached, setTimeoutReached] = useState(false);
-
-  useEffect(() => {
-    if (!jobData?.data?.length) {
-      setLoading(true);
-      const timer = setTimeout(() => {
-        setTimeoutReached(true);
-        setLoading(false);
-      }, 25000); // 25 sec
-
-      return () => clearTimeout(timer);
-    } else {
-      setLoading(false);
-    }
-  }, [jobData]);
-
-  const refreshJobs = async () => {
-    try {
-      const updatedJobs = await getMyJobs();
-      setJobs(updatedJobs);
-    } catch (err) {
-      console.error('Refresh jobs failed:', err);
-    }
-  };
-
-  // Loader view
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6264A7" />
-        <Text style={{ marginTop: 10 }}>Loading jobs...</Text>
-      </View>
-    );
-  }
-
-  // No posts view
-  if (timeoutReached && (!jobData?.data || jobData.data.length === 0)) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>No posts available</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor:'#fff'}}>
-      {(showHeader || showLikeAndShareButton) && <TopBar />}
-      {showBackButton && (
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-          </TouchableOpacity>
-          <Heading>{heading}</Heading>
-        </View>
-      )}
-      <FlatList
-        data={jobData?.data}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <PostCard
-            item={item}
-            showLikeAndShare={showLikeAndShare}
-            showButtonText={showButtonText}
-            showLikeAndShareButton={showLikeAndShareButton}
-            refreshJobs={refreshJobs}
-          />
-        )}
-        contentContainerStyle={styles.list}
-      />
-
-      {(showBottomBar || showLikeAndShareButton) && (
-        <>
-          <View style={{ height: 100, backgroundColor: '#fff' }} />
-          <BottomTabBar />
-        </>
-      )}
-    </View>
-  );
-}
+// ─────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   list: {
     padding: 16,
     backgroundColor: '#fff',
-  },
-  headerLogo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain',
-    marginTop: 10,
-    alignSelf: 'flex-end',
-    padding: 10,
-  },
-  profileButton: {
-    marginRight: 10,
-    padding: 10,
-    borderRadius: 8,
   },
   card: {
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 10,
     marginBottom: 6,
+    marginTop: 5,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
-    marginTop: 5,
   },
   header: {
     flexDirection: 'row',
@@ -389,29 +552,16 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
   },
-  postImage: {
-    width: 200,
-    height: 200, // or whatever height fits your card
-    borderRadius: 8,
-    marginTop: 10,
-    paddingHorizontal: 170,
-  },
-  sliderImage: {
-    width: screenWidth - 40, // if your card has padding/margin
-    height: 250,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-
-  imageSliderContainer: {
-    marginTop: 10,
-  },
   content: {
     fontSize: 14,
     color: '#333',
     paddingTop: 10,
     paddingHorizontal: 10,
     paddingVertical: 5,
+  },
+  expandToggle: {
+    color: '#6264A7',
+    marginTop: 4,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -425,6 +575,9 @@ const styles = StyleSheet.create({
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   buttonLabel: {
     marginLeft: 5,
@@ -467,12 +620,6 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
   },
-  heading: {
-    marginTop: 10,
-    fontSize: 14,
-    fontWeight: '600',
-    left: '32%',
-  },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,9 +627,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
   },
-  noImage: {
-    fontStyle: 'italic',
-    color: '#999',
-    paddingVertical: 10,
+  sliderImage: {
+    width: screenWidth - 40,
+    height: 250,
+    borderRadius: 10,
+    marginRight: 10,
   },
 });

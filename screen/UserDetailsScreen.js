@@ -72,9 +72,10 @@ const AccountScreen = () => {
       if (contentType && contentType.includes('application/json')) {
         const json = JSON.parse(text);
         if (response.ok) {
-          console.log('User data fetched successfully:', json.data);
-           await AsyncStorage.setItem('user', String(userData));
+          // console.log('User data fetched successfully:', json.data);
+
           setUserData(json.data);
+          await AsyncStorage.setItem('user', JSON.stringify(json.data)); // also make sure to stringify
         } else {
           Alert.alert('Error', json.message || 'Failed to fetch user');
         }
@@ -88,14 +89,15 @@ const AccountScreen = () => {
       setLoading(false);
     }
   };
-  console.log('User Data:', userData?.addresses);
+  console.log('User Data:', userData);
   const addresses = userData?.addresses || [];
 
   useEffect(() => {
     fetchUserProfile();
   }, []);
 
-  if (loading) return <ActivityIndicator style={{flex: 1}} size="large" color="#6264A7" />;
+  if (loading)
+    return <ActivityIndicator style={{flex: 1}} size="large" color="#6264A7" />;
   const socialMediaCheck = userData?.social_media_provider;
   const handleBackPress = () => {
     navigation.goBack();
@@ -106,11 +108,11 @@ const AccountScreen = () => {
     if (success) {
       navigation.navigate('Login');
     }
-  };  
+  };
   const handleEditPress = () => {
     navigation.navigate('UserDetailScreen', {
       userData: userData,
-    } );
+    });
   };
 
   // const handleLogout = () => {
@@ -123,15 +125,19 @@ const AccountScreen = () => {
         navigation.navigate('ManageAddressScreen', {
           addressArray: addresses,
         });
-      } else if (label === 'Manage Payment Methods') {
-        navigation.navigate('ManagePaymentMethodsScreen'); // example
-      } else if (label === 'About Buildio') {
+      }
+      //  else if (label === 'Manage Payment Methods') {
+      //   navigation.navigate('ManagePaymentMethodsScreen'); // example
+      // }
+       else if (label === 'About Buildio') {
         navigation.navigate('AboutUsScreen');
         // example
-      } else if (label === 'Notifications') {
-        navigation.navigate('NotificationsScreen');
-        // example
-      } else if (label === 'Privacy & Security') {
+      }
+      //  else if (label === 'Notifications') {
+      //   navigation.navigate('NotificationsScreen');
+      //   // example
+      // } 
+      else if (label === 'Privacy & Security') {
         navigation.navigate('PrivacySecurity');
         // example
       } else if (label === 'Reset Password') {
@@ -148,7 +154,7 @@ const AccountScreen = () => {
       </TouchableOpacity>
     );
   };
-
+console.log()
   return (
     <>
       <TopBar />
@@ -168,12 +174,7 @@ const AccountScreen = () => {
                 <TouchableOpacity
                   style={styles.editIcon}
                   onPress={handleEditPress}>
-                  <Icon
-                    name="pencil"
-                    type="ionicon"
-                    size={16}
-                    color="#fff"
-                  />
+                  <Icon name="pencil" type="ionicon" size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
               <Text style={styles.profileName}>
@@ -184,12 +185,12 @@ const AccountScreen = () => {
             {renderRow('Manage address', () =>
               navigation.navigate('ManageAddressScreen'),
             )}
-            {renderRow('Manage Payment Methods', () =>
+            {/* {renderRow('Manage Payment Methods', () =>
               navigation.navigate('ManagePaymentMethodsScreen'),
-            )}
-            {renderRow('Notifications', () =>
+            )} */}
+            {/* {renderRow('Notifications', () =>
               navigation.navigate('NotificationsScreen'),
-            )}
+            )} */}
             {renderRow('Privacy & Security', () =>
               navigation.navigate('PrivacySecurity'),
             )}
@@ -201,7 +202,9 @@ const AccountScreen = () => {
                 navigation.navigate('ResetPassword'),
               )}
 
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}>
               <Icon
                 name="log-out-outline"
                 type="ionicon"

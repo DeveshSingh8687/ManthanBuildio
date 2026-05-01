@@ -2,6 +2,7 @@ import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {LoginManager, AccessToken} from 'react-native-fbsdk-next';
+import {addDeviceId} from '../../../utils/fcmToken';
 // const saveUserToFirestore = async () => {
 //   const user = auth().currentUser;
 //   console.log('Current User:', user?.displayName);
@@ -66,9 +67,15 @@ export const socialLoginAPI = async ({
     const token = data.data.token;
     const firstName = data.data.user?.first_name;
     const lastName = data.data.user?.last_name;
+    const isTermsAccepted = data.data.user?.is_terms_accepted;
+    
     console.log(token, firstName, lastName);
+    console.log(data.data?.user?.id, 'datain login');
+    
     await AsyncStorage.setItem('authToken', token);
-    // await AsyncStorage.setItem('firstName', firstName);
+    await AsyncStorage.setItem('USERID', String(data.data?.user?.id));
+    await AsyncStorage.setItem('is_terms_accepted', isTermsAccepted ? 'true' : 'false');
+    
     // await AsyncStorage.setItem('lastName', lastName);
     return data;
   } catch (error) {
@@ -131,8 +138,15 @@ export const _signInWithGoogle = async navigation => {
     // 7. Store new user ID
     // await AsyncStorage.setItem('USERID', idToken);
 
-    // 8. Navigate to Home
-    navigation.navigate('HomeScreen');
+    // 8. Check if terms are accepted from API response
+    const isTermsAccepted = apiResponse.data.user?.is_terms_accepted;
+    
+    if (isTermsAccepted) {
+      navigation.navigate('HomeScreen');
+    } else {
+      // Navigate to PrivacySecurityScreen if terms not accepted
+      navigation.navigate('PrivacySecurity');
+    }
 
     return user;
   } catch (error) {
@@ -141,7 +155,8 @@ export const _signInWithGoogle = async navigation => {
   }
 };
 export async function onFacebookButtonPress(navigation) {
-  console.log('Facebook button pressed');
+  const fcmToken = await AsyncStorage.getItem('fcmToken');
+  await addDeviceId(fcmToken);
   // Attempt login with permissions
   const result = await LoginManager.logInWithPermissions([
     'public_profile',
@@ -157,7 +172,6 @@ export async function onFacebookButtonPress(navigation) {
 
   // Once signed in, get the users AccessToken
   const data = await AccessToken.getCurrentAccessToken();
-  navigation.navigate('HomeScreen');
 
   if (!data) {
     throw 'Something went wrong obtaining access token';
@@ -167,6 +181,16 @@ export async function onFacebookButtonPress(navigation) {
   const facebookCredential = FacebookAuthProvider.credential(data.accessToken);
   await getAuth().signInWithCredential(facebookCredential);
   console.log('Facebook credential:', facebookCredential);
+
+  // Check if terms are accepted
+  const isTermsAccepted = await AsyncStorage.getItem('is_terms_accepted');
+  
+  if (isTermsAccepted === 'true') {
+    navigation.navigate('HomeScreen');
+  } else {
+    // Navigate to PrivacySecurityScreen if terms not accepted
+    navigation.navigate('PrivacySecurity');
+  }
 
   // Sign-in the user with the credential
   return signInWithCredential(getAuth(), facebookCredential);
@@ -218,9 +242,9 @@ export const logout = async () => {
       );
     }
 
-    // ✅ Clear AsyncStorage
+    // ✅ Clear AsyncStorage - Remove auth token and user data (keep is_terms_accepted)
     try {
-      await AsyncStorage.multiRemove(['authToken', 'firstName', 'lastName']);
+      await AsyncStorage.multiRemove(['authToken', 'firstName', 'lastName', 'USERID', 'EMAIL']);
       console.log('Session keys removed from AsyncStorage');
     } catch (storageError) {
       console.log(

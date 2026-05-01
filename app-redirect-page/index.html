@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open BuildIO App</title>
+</head>
+<body>
+    <div style="text-align: center; padding: 50px;">
+        <h2>Opening BuildIO App...</h2>
+        <p id="status">Please wait...</p>
+    </div>
+
+    <script>
+        // Immediately try to open the app
+        window.location = "buildio://Home";
+        
+        // Show fallback message after 2 seconds
+        setTimeout(() => {
+            document.getElementById('status').innerHTML = 
+                'App not installed? <br><a href="path/to/your/buildio.apk">Download BuildIO APK here</a>';
+        }, 2000);
+    </script>
+</body>
+</html>

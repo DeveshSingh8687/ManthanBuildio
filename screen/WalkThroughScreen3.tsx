@@ -24,8 +24,8 @@ export default function WelcomeScreen3() {
   const [isPressed, setIsPressed] = useState(false);
 
   const handlePress = async () => {
-    navigation.navigate('HomeScreen');
     await AsyncStorage.setItem('prefs:hasSeenIntro', 'true');
+    navigation.navigate('Login');
   };
 
   return (

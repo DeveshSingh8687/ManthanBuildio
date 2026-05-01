@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,13 @@ import {
   SafeAreaView,
   Platform,
 } from 'react-native';
-import { Icon } from 'react-native-elements';
+import {Icon} from 'react-native-elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  NavigationProp,
-  useNavigation,
-} from '@react-navigation/native';
-import { RootStackParamList } from '../../navigation/Navigation';
-import { handleSecurePress, logout } from '../config/auth';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
+import {RootStackParamList} from '../../navigation/Navigation';
+import {handleSecurePress, logout} from '../config/auth';
 
-export const NavPopup = ({ visible, onClose }: any) => {
+export const NavPopup = ({visible, onClose}: any) => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
@@ -58,28 +55,65 @@ export const NavPopup = ({ visible, onClose }: any) => {
               <>
                 <TouchableOpacity
                   style={styles.navItemMenu}
-                  onPress={() => handleSecurePress('AccountScreen', navigation)}>
-                  <Icon name="account-circle" type="material" size={22} />
+                  onPress={() =>
+                    handleSecurePress('AccountScreen', navigation)
+                  }>
+                  <Icon
+                    name="account-circle"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />
                   <Text style={styles.navText}>Profile</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.navItemMenu}
                   onPress={() => handleSecurePress('JobsSection', navigation)}>
-                  <Icon name="assignment" type="material" size={22} />
+                  <Icon
+                    name="assignment"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />
                   <Text style={styles.navText}>Jobs</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.navItemMenu}
                   onPress={() => handleSecurePress('MyProfile', navigation)}>
-                  <Icon name="person" type="material" size={22} />
-                  <Text style={styles.navText}>My Profile</Text>
+                  <Icon
+                    name="person"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />
+                  <Text style={styles.navText}> MyFeed</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.navItemMenu}
+                  onPress={() => handleSecurePress('Bookings', navigation)}>
+                  <Icon
+                    name="bookmark"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />{' '}
+                  <Text style={styles.navText}>Bookings</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItemMenu} onPress={handleLogout}>
-                  <Icon name="logout" type="material" size={22} color="#6264A7" />
-                  <Text style={[styles.navText, { color: '#6264A7' }]}>Logout</Text>
+                <TouchableOpacity
+                  style={styles.navItemMenu}
+                  onPress={handleLogout}>
+                  <Icon
+                    name="logout"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />
+                  <Text style={[styles.navText, {color: '#6264A7'}]}>
+                    Logout
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -87,15 +121,29 @@ export const NavPopup = ({ visible, onClose }: any) => {
                 <TouchableOpacity
                   style={styles.navItemMenu}
                   onPress={() => handleNavigate('Login')}>
-                  <Icon name="login" type="material" size={22} color="#6264A7" />
-                  <Text style={[styles.navText, { color: '#6264A7' }]}>Sign In</Text>
+                  <Icon
+                    name="login"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />
+                  <Text style={[styles.navText, {color: '#6264A7'}]}>
+                    Sign In
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.navItemMenu}
                   onPress={() => handleNavigate('SignUp')}>
-                  <Icon name="person-add" type="material" size={22} color="#6264A7" />
-                  <Text style={[styles.navText, { color: '#6264A7' }]}>Sign Up</Text>
+                  <Icon
+                    name="person-add"
+                    type="material"
+                    size={22}
+                    color="#6264A7"
+                  />
+                  <Text style={[styles.navText, {color: '#6264A7'}]}>
+                    Sign Up
+                  </Text>
                 </TouchableOpacity>
               </>
             )}
@@ -105,7 +153,6 @@ export const NavPopup = ({ visible, onClose }: any) => {
     </Modal>
   );
 };
-
 
 const styles = StyleSheet.create({
   modalOverlay: {
@@ -129,10 +176,9 @@ const styles = StyleSheet.create({
     marginRight: 10,
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    
   },
   navText: {
     marginLeft: 12,

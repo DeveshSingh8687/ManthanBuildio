@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  Alert
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -81,6 +82,7 @@ const fetchAddresses = async () => {
       );
 
       const result = await response.json();
+      console.log(result,'result')
 
       if (response.ok) {
         setAddresses(prev =>
@@ -98,7 +100,7 @@ const fetchAddresses = async () => {
     }
   };
   if (loading)
-    return <ActivityIndicator style={{flex: 1}} size="large" color="#6264A7" />;
+    {return <ActivityIndicator style={{flex: 1}} size="large" color="#6264A7" />;}
 
   return (
     <>
@@ -120,7 +122,7 @@ const fetchAddresses = async () => {
           <Text style={styles.addText}>Add another address</Text>
         </TouchableOpacity>
 
-        <ScrollView contentContainerStyle={styles.addressList}>
+        <ScrollView contentContainerStyle={[styles.addressList, { paddingBottom: 120 }]}>
           {Array.isArray(addresses) &&
             addresses.map((addr, index) => (
               <View key={index} style={styles.addressCard}>
@@ -128,12 +130,11 @@ const fetchAddresses = async () => {
                   <Text style={styles.addressLabel}>
                     {addr.label || 'Unnamed Address'}
                   </Text>
-                  {/* <Text style={styles.addressText}>
-                    {addr.fullAddress ||
-                      'Coordinates: ' + addr.lat + ', ' + addr.long}
-                  </Text> */}
                   <Text style={styles.addressText}>
-                    {addr.apartment}, {addr.building}
+                    {addr.map_text}
+                  </Text>
+                  <Text style={styles.addressText}>
+                    {addr.apartment} {addr.building}
                   </Text>
                   <Text style={styles.addressText}>
                     {addr.notes || 'No notes provided'}
@@ -182,7 +183,7 @@ const fetchAddresses = async () => {
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#fff'},
+  container: {flex: 1, backgroundColor: '#fff',paddingBottom:0},
   header: {flexDirection: 'row', alignItems: 'center', padding: 16},
   // backButton: {marginRight: 12},
   title: {
